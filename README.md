@@ -65,6 +65,8 @@ If you never ran `./install.sh` on a machine that was already edited by hand, un
 
 After editing the live plugin on a machine, copy the working files back here, bump the version, commit, and tag.
 
+Agents (and future-you): read [`AGENTS.md`](AGENTS.md) for layout, uninstall snapshot rules, version bumps, and conventional commits.
+
 ## GitHub vs Cursor Origin
 
 These are **different git hosts**.
