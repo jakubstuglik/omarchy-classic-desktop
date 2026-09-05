@@ -19,6 +19,7 @@ PLUGIN_DST="$HOME/.config/omarchy/plugins/$PLUGIN_ID"
 BIN_DIR="$HOME/.local/bin"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ocd-classic"
 REF_FILE="$STATE_DIR/installed-ref"
+OCD_DOCK_DIR="${OCD_DOCK_DIR:-$HOME/.config/omarchy/plugins/$OCD_DOCK_ID}"
 
 DRY_RUN="${DRY_RUN:-0}"
 

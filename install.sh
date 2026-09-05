@@ -5,24 +5,32 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/common.sh
 source "$ROOT/lib/common.sh"
+# shellcheck source=lib/backup.sh
+source "$ROOT/lib/backup.sh"
 
 usage() {
   cat <<EOF
-Usage: ./install.sh [--dry-run] [--keep-ocd-dock]
+Usage: ./install.sh [--dry-run] [--keep-ocd-dock] [--rebackup]
 
 Install the classic taskbar, window helpers, and floating/stacking Hyprland
 behavior. Requires Omarchy 4.x and OCD v1.2 or newer.
 
+First install snapshots the current OCD/Hyprland files under
+~/.local/state/ocd-classic/backup/ so ./uninstall.sh can put OCD back.
+
   --dry-run         Print every mutation, change nothing
   --keep-ocd-dock   Leave OCD's text-tab dock enabled (two bars will show)
+  --rebackup        Replace the existing uninstall snapshot (rarely needed)
 EOF
 }
 
 KEEP_OCD_DOCK=0
+REBACKUP=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run) DRY_RUN=1; shift ;;
     --keep-ocd-dock) KEEP_OCD_DOCK=1; shift ;;
+    --rebackup) REBACKUP=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) log "unknown flag: $1"; usage; exit 2 ;;
   esac
@@ -40,6 +48,7 @@ preflight() {
   need_cmd python3
   need_cmd hyprctl
   need_cmd omarchy
+  need_cmd curl
 
   local ver
   ver="$(omarchy version 2>/dev/null | head -1 || true)"
@@ -185,6 +194,7 @@ reload_hypr() {
 }
 
 preflight
+take_snapshot "$REBACKUP"
 install_files
 strip_legacy_inline_classic
 marker_append "$HYPR_MAIN" "$MARKER" 'require("classic")'
@@ -196,4 +206,5 @@ reload_hypr
 
 log "omarchy-classic-desktop $VERSION installed."
 log "Pin apps from the taskbar right-click menu. Pins stay on this machine."
-log "To undo: $ROOT/uninstall.sh"
+log "Snapshot for uninstall: $BACKUP_DIR"
+log "To return to OCD: $ROOT/uninstall.sh"

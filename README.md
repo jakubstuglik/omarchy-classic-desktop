@@ -34,13 +34,23 @@ The installer:
 
 Pins stay in `~/.config/omarchy/ocd/dock-pins.json` on each machine. They are not part of this repo.
 
+First install writes a snapshot to `~/.local/state/ocd-classic/backup/`:
+
+- `pre/` — Hyprland files and the OCD dock as they were before this overlay
+- `stock/` — pristine OCD dock + `ocd.lua` fetched from the installed OCD tag (so uninstall can return to real OCD even if those files were already edited)
+
+Re-running `./install.sh` keeps that first snapshot. Use `--rebackup` only if you really want to replace it.
+
 ## Uninstall
 
 ```sh
+./uninstall.sh --dry-run
 ./uninstall.sh
 ```
 
-OCD itself is left installed.
+That restores OCD’s own dock and titlebar config, puts `hyprland.lua` / `bindings.lua` / `input.lua` back (and strips overlay hunks that were already in those files), removes this overlay’s plugin and `ocd-window` helpers, and re-enables the OCD dock. OCD itself stays installed. Pins are left alone.
+
+If you never ran `./install.sh` on a machine that was already edited by hand, uninstall still strips the known overlay hunks and tries to fetch stock OCD files from GitHub.
 
 ## Develop / version
 
