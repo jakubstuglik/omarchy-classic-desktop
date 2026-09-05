@@ -1,0 +1,11 @@
+# Changelog
+
+## 0.1.0 — 2026-09-05
+
+Initial overlay on top of OCD v1.2.
+
+- Icon taskbar with per-app grouping, pins, and a right-click menu
+- `ocd-window` helpers: raise, maximize-as-float, minimize, close, fit
+- Hyprland classic desktop: all windows float, snap, click-to-front, work-area clamp
+- Click-to-focus and tiling key unbinds
+- Titlebars sit outside the client; maximize uses the work area instead of exclusive fullscreen

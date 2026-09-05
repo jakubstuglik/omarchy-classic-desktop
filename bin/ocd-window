@@ -1,0 +1,312 @@
+#!/usr/bin/env bash
+# Windows-style window actions for OCD/Hyprland.
+# Maximize is a normal floating size (the work area), not Hyprland's
+# exclusive fullscreen layer — that layer is why a maximized window
+# swallowed everything else and why switching away "un-maximized" it.
+set -euo pipefail
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ocd"
+STATE_FILE="$STATE_DIR/max-geom.json"
+
+die() { printf 'ocd-window: %s\n' "$*" >&2; exit 1; }
+
+normalize_addr() {
+  local a="${1:-}"
+  [[ -n "$a" ]] || return 1
+  [[ "$a" == 0x* ]] || a="0x$a"
+  printf '%s' "$a"
+}
+
+active_addr() {
+  hyprctl activewindow -j | jq -r '.address // empty'
+}
+
+ensure_state() {
+  mkdir -p "$STATE_DIR"
+  [[ -f "$STATE_FILE" ]] || echo '{}' >"$STATE_FILE"
+}
+
+client_json() {
+  local addr="$1"
+  hyprctl clients -j | jq -c --arg a "$addr" '.[] | select(.address == $a)'
+}
+
+# reserved is [left, top, right, bottom]. hyprbars is a window decoration
+# (part of the window), so maximize uses only the exclusive zone + border.
+option_int() {
+  hyprctl getoption "$1" -j 2>/dev/null | jq -r '.int // 0'
+}
+
+workarea_for_monitor() {
+  local mon_id="$1"
+  local border bar
+  border="$(option_int general:border_size)"
+  [[ "$border" =~ ^[0-9]+$ ]] || border=2
+  bar="$(option_int plugin:hyprbars:bar_height)"
+  [[ "$bar" =~ ^[0-9]+$ ]] || bar=30
+  hyprctl monitors -j | jq -r --argjson id "$mon_id" --argjson border "$border" --argjson bar "$bar" '
+    .[] | select(.id == $id) |
+    (
+      .x + .reserved[0] + $border
+    ) as $x |
+    (
+      .y + .reserved[1] + $border + $bar
+    ) as $y |
+    (
+      .width - .reserved[0] - .reserved[2] - (2 * $border)
+    ) as $w |
+    (
+      .height - .reserved[1] - .reserved[3] - (2 * $border) - $bar
+    ) as $h |
+    "\($x) \($y) \($w) \($h)"
+  '
+}
+
+dispatch() {
+  hyprctl eval "hl.dispatch($1)" >/dev/null
+}
+
+place() {
+  local addr="$1" x="$2" y="$3" w="$4" h="$5"
+  # float action is on/off/toggle — "set" is invalid and was tiling windows.
+  dispatch "hl.dsp.window.float({action = 'on', window = 'address:${addr}'})" || true
+  dispatch "hl.dsp.window.fullscreen({mode = 'maximized', action = 'unset', window = 'address:${addr}'})" || true
+  dispatch "hl.dsp.window.fullscreen({mode = 'fullscreen', action = 'unset', window = 'address:${addr}'})" || true
+  dispatch "hl.dsp.window.resize({x = ${w}, y = ${h}, window = 'address:${addr}'})"
+  dispatch "hl.dsp.window.move({x = ${x}, y = ${y}, relative = false, window = 'address:${addr}'})"
+}
+
+save_geom() {
+  local addr="$1" x="$2" y="$3" w="$4" h="$5"
+  ensure_state
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg a "$addr" --argjson x "$x" --argjson y "$y" --argjson w "$w" --argjson h "$h" \
+    '.[$a] = {x:$x, y:$y, w:$w, h:$h}' "$STATE_FILE" >"$tmp"
+  mv "$tmp" "$STATE_FILE"
+}
+
+load_geom() {
+  local addr="$1"
+  ensure_state
+  jq -r --arg a "$addr" '.[$a] // empty | "\(.x) \(.y) \(.w) \(.h)"' "$STATE_FILE"
+}
+
+clear_geom() {
+  local addr="$1"
+  ensure_state
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg a "$addr" 'del(.[$a])' "$STATE_FILE" >"$tmp"
+  mv "$tmp" "$STATE_FILE"
+}
+
+is_workarea_sized() {
+  local x="$1" y="$2" w="$3" h="$4" wx="$5" wy="$6" ww="$7" wh="$8"
+  local dx dy dw dh
+  dx=$(( x > wx ? x - wx : wx - x ))
+  dy=$(( y > wy ? y - wy : wy - y ))
+  dw=$(( w > ww ? w - ww : ww - w ))
+  dh=$(( h > wh ? h - wh : wh - h ))
+  (( dx <= 24 && dy <= 24 && dw <= 48 && dh <= 48 ))
+}
+
+# If a window is in Hyprland's exclusive maximize/fullscreen layer, turn
+# it into a normal floating window that still fills the work area.
+keep_max_as_float() {
+  local addr="$1"
+  local client
+  client="$(client_json "$addr")"
+  [[ -n "$client" ]] || return 0
+  local fs
+  fs="$(jq -r '.fullscreen // 0' <<<"$client")"
+  local fsc
+  fsc="$(jq -r '.fullscreenClient // 0' <<<"$client")"
+  (( fs != 0 || fsc != 0 )) || return 0
+
+  local mon x y w h
+  mon="$(jq -r '.monitor' <<<"$client")"
+  read -r x y w h <<<"$(workarea_for_monitor "$mon")"
+  [[ -n "${x:-}" && -n "${w:-}" ]] || return 0
+  place "$addr" "$x" "$y" "$w" "$h"
+}
+
+cmd_keep_max() {
+  local addr
+  addr="$(normalize_addr "${1:-}")" || die "keep-max: missing address"
+  keep_max_as_float "$addr"
+}
+
+cmd_raise() {
+  local addr
+  addr="$(normalize_addr "${1:-}")" || die "raise: missing address"
+
+  local others
+  others="$(hyprctl clients -j | jq -r --arg a "$addr" '
+    .[] | select(.address != $a and (.fullscreen != 0 or .fullscreenClient != 0)) | .address
+  ')"
+  while IFS= read -r other; do
+    [[ -n "$other" ]] || continue
+    keep_max_as_float "$other"
+  done <<<"$others"
+
+  dispatch "hl.dsp.window.float({action = 'on', window = 'address:${addr}'})" || true
+  dispatch "hl.dsp.focus({window = 'address:${addr}'})"
+
+  # If this window was maximized, put it back to the work area. Switching
+  # away must not forget that; clicking it in the taskbar should show it
+  # maximized again.
+  local saved client mon wx wy ww wh
+  saved="$(load_geom "$addr")"
+  client="$(client_json "$addr")"
+  if [[ -n "$saved" && -n "$client" ]]; then
+    mon="$(jq -r '.monitor' <<<"$client")"
+    read -r wx wy ww wh <<<"$(workarea_for_monitor "$mon")"
+    if [[ -n "${wx:-}" && -n "${ww:-}" ]]; then
+      place "$addr" "$wx" "$wy" "$ww" "$wh"
+    fi
+  fi
+
+  dispatch "hl.dsp.window.bring_to_top({window = 'address:${addr}'})"
+  dispatch "hl.dsp.window.alter_zorder({mode = 'top', window = 'address:${addr}'})"
+}
+
+cmd_maximize() {
+  local addr
+  addr="$(normalize_addr "${1:-$(active_addr)}")" || die "maximize: no window"
+  local client
+  client="$(client_json "$addr")"
+  [[ -n "$client" ]] || die "maximize: window $addr not found"
+
+  local mon cx cy cw ch
+  mon="$(jq -r '.monitor' <<<"$client")"
+  cx="$(jq -r '.at[0]' <<<"$client")"
+  cy="$(jq -r '.at[1]' <<<"$client")"
+  cw="$(jq -r '.size[0]' <<<"$client")"
+  ch="$(jq -r '.size[1]' <<<"$client")"
+  local wx wy ww wh
+  read -r wx wy ww wh <<<"$(workarea_for_monitor "$mon")"
+  [[ -n "${wx:-}" && -n "${ww:-}" ]] || die "maximize: no monitor work area"
+
+  local saved fs
+  saved="$(load_geom "$addr")"
+  fs="$(jq -r '.fullscreen // 0' <<<"$client")"
+  if [[ -n "$saved" ]]; then
+    read -r sx sy sw sh <<<"$saved"
+    place "$addr" "$sx" "$sy" "$sw" "$sh"
+    clear_geom "$addr"
+    return 0
+  fi
+
+  # Don't save exclusive-fullscreen geometry as the restore size.
+  if [[ "$fs" == "0" ]]; then
+    save_geom "$addr" "$cx" "$cy" "$cw" "$ch"
+  fi
+  place "$addr" "$wx" "$wy" "$ww" "$wh"
+}
+
+# Clamp a floating window into the monitor work area so the hyprbars
+# titlebar stays on-screen (it is drawn *above* the window's `at`).
+fit_geom() {
+  local cx="$1" cy="$2" cw="$3" ch="$4" wx="$5" wy="$6" ww="$7" wh="$8"
+  local nw="$cw" nh="$ch" nx="$cx" ny="$cy"
+  (( nw > ww )) && nw=$ww
+  (( nh > wh )) && nh=$wh
+  (( nw < 200 )) && nw=200
+  (( nh < 120 )) && nh=120
+  (( nw > ww )) && nw=$ww
+  (( nh > wh )) && nh=$wh
+  (( nx < wx )) && nx=$wx
+  (( ny < wy )) && ny=$wy
+  (( nx + nw > wx + ww )) && nx=$((wx + ww - nw))
+  (( ny + nh > wy + wh )) && ny=$((wy + wh - nh))
+  (( nx < wx )) && nx=$wx
+  (( ny < wy )) && ny=$wy
+  printf '%s %s %s %s' "$nx" "$ny" "$nw" "$nh"
+}
+
+cmd_fit() {
+  local addr
+  addr="$(normalize_addr "${1:-$(active_addr)}")" || return 0
+  local client
+  client="$(client_json "$addr")"
+  [[ -n "$client" ]] || return 0
+  local ws mapped
+  ws="$(jq -r '.workspace.name // ""' <<<"$client")"
+  mapped="$(jq -r '.mapped' <<<"$client")"
+  [[ "$mapped" == "true" ]] || return 0
+  local hidden
+  hidden="$(jq -r '.hidden // false' <<<"$client")"
+  local visible
+  visible="$(jq -r '.visible // false' <<<"$client")"
+  # Skip parked minimized windows, but still clamp ones that are showing —
+  # a too-tall window on special:minimized can remain visible.
+  if [[ "$ws" == "special:minimized" && "$visible" != "true" ]]; then
+    return 0
+  fi
+  [[ "$hidden" != "true" ]] || return 0
+
+  local mon cx cy cw ch wx wy ww wh
+  mon="$(jq -r '.monitor' <<<"$client")"
+  cx="$(jq -r '.at[0]' <<<"$client")"
+  cy="$(jq -r '.at[1]' <<<"$client")"
+  cw="$(jq -r '.size[0]' <<<"$client")"
+  ch="$(jq -r '.size[1]' <<<"$client")"
+  read -r wx wy ww wh <<<"$(workarea_for_monitor "$mon")"
+  [[ -n "${wx:-}" && -n "${ww:-}" ]] || return 0
+
+  local nx ny nw nh
+  read -r nx ny nw nh <<<"$(fit_geom "$cx" "$cy" "$cw" "$ch" "$wx" "$wy" "$ww" "$wh")"
+  (( nx == cx && ny == cy && nw == cw && nh == ch )) && return 0
+  place "$addr" "$nx" "$ny" "$nw" "$nh"
+}
+
+cmd_fit_all() {
+  local addr
+  while IFS= read -r addr; do
+    [[ -n "$addr" ]] || continue
+    cmd_fit "$addr"
+  done < <(hyprctl clients -j | jq -r '.[] | select(.mapped == true and .workspace.name != "special:minimized") | .address')
+}
+
+cmd_minimize() {
+  local addr
+  addr="$(normalize_addr "${1:-$(active_addr)}")" || die "minimize: no window"
+  dispatch "hl.dsp.window.move({workspace = 'special:minimized', follow = false, window = 'address:${addr}'})"
+}
+
+cmd_close() {
+  local addr
+  addr="$(normalize_addr "${1:-$(active_addr)}")" || die "close: no window"
+  dispatch "hl.dsp.window.close({window = 'address:${addr}'})"
+}
+
+usage() {
+  cat <<'EOF'
+Usage: ocd-window raise <address>
+       ocd-window maximize [address]
+       ocd-window minimize [address]
+       ocd-window close [address]
+       ocd-window fit [address]
+       ocd-window fit-all
+       ocd-window keep-max <address>
+EOF
+}
+
+main() {
+  local cmd="${1:-}"
+  shift || true
+  case "$cmd" in
+    raise) cmd_raise "$@" ;;
+    maximize) cmd_maximize "$@" ;;
+    minimize) cmd_minimize "$@" ;;
+    close) cmd_close "$@" ;;
+    fit) cmd_fit "$@" ;;
+    fit-all) cmd_fit_all "$@" ;;
+    keep-max) cmd_keep_max "$@" ;;
+    -h|--help|help|"") usage; [[ -n "$cmd" ]] || exit 2 ;;
+    *) die "unknown command: $cmd" ;;
+  esac
+}
+
+main "$@"
