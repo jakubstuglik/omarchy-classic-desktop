@@ -17,7 +17,7 @@ ocd status
 ## Install
 
 ```sh
-git clone <this-repo> ~/Projects/omarchy-classic-desktop
+git clone https://github.com/jakubstuglik/omarchy-classic-desktop.git ~/Projects/omarchy-classic-desktop
 cd ~/Projects/omarchy-classic-desktop
 ./install.sh --dry-run
 ./install.sh
@@ -70,15 +70,9 @@ These are **different git hosts**.
 
 Cursor Origin is optional: create the GitHub repo, then **Sync from GitHub** in Origin so Cursor agents can browse it. Pushes on a synced repo still go to GitHub. Do not make Origin the only remote — you cannot currently publish it.
 
-This machine did not have `gh` or `origin` logged in when the repo was created. Push from here after:
+GitHub remote: https://github.com/jakubstuglik/omarchy-classic-desktop
 
-```sh
-gh auth login
-cd ~/Projects/omarchy-classic-desktop
-gh repo create omarchy-classic-desktop --public --source=. --remote=origin --push
-```
-
-Then in Cursor: Codebase → Sync from GitHub → pick this repo.
+In Cursor: Codebase → Sync from GitHub → pick this repo.
 
 If you want Origin as a second remote later:
 
