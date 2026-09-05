@@ -18,7 +18,7 @@ Cursor Origin is an optional mirror only. Origin cannot host public repos yet.
 ```
 plugin/taskbar/     Quickshell service id: io.github.jstuglik.taskbar
 bin/ocd-window      maximize / raise / minimize / fit helpers
-hypr/classic.lua    float, stack, work-area clamp
+hypr/classic.lua    float, stack, work-area clamp, titlebar double-click maximize
 install.sh          apply overlay; snapshot OCD files first
 uninstall.sh        restore OCD from that snapshot
 lib/backup.sh       snapshot / fetch stock OCD / strip overlay hunks

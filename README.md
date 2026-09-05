@@ -31,6 +31,7 @@ The installer:
 - installs `~/.config/hypr/classic.lua` and hooks it from `hyprland.lua`
 - unbinds tiling keys and sets click-to-focus
 - patches OCD’s maximize button to use the work-area helper
+- double-click the titlebar to maximize or restore (same helper)
 
 Pins stay in `~/.config/omarchy/ocd/dock-pins.json` on each machine. They are not part of this repo.
 

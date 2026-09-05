@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0 — 2026-09-05
+
+- Double-click a window titlebar to maximize or restore (same work-area maximize as the yellow button)
+
 ## 0.1.1 — 2026-09-05
 
 - `install.sh` snapshots OCD/Hyprland files (and fetches stock OCD dock + `ocd.lua`) on first install

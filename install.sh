@@ -115,7 +115,7 @@ patch_ocd_lua() {
     return 0
   }
   if dry; then
-    log "[dry-run] patch $HYPR_OCD (bar_part_of_window, maximize helper)"
+    log "[dry-run] patch $HYPR_OCD (bar_part_of_window, maximize helper, double-click)"
     return 0
   fi
   python3 - "$HYPR_OCD" <<'PY'
@@ -133,6 +133,24 @@ if "bar_part_of_window" not in text:
     )
     if needle in text:
         text = text.replace(needle, insert, 1)
+        changed = True
+if "on_double_click" not in text:
+    dbl = (
+        '        on_double_click = os.getenv("HOME") .. "/.local/bin/ocd-window maximize",\n'
+    )
+    if "        bar_part_of_window = false," in text:
+        text = text.replace(
+            "        bar_part_of_window = false,\n",
+            "        bar_part_of_window = false,\n" + dbl,
+            1,
+        )
+        changed = True
+    elif "        bar_button_padding = 6," in text:
+        text = text.replace(
+            "        bar_button_padding = 6,\n",
+            "        bar_button_padding = 6,\n" + dbl,
+            1,
+        )
         changed = True
 old = "[[hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\", action = \"toggle\" })']]"
 new = 'os.getenv("HOME") .. "/.local/bin/ocd-window maximize"'

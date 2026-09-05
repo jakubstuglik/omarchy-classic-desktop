@@ -1,4 +1,4 @@
--- omarchy-classic-desktop 0.1.0
+-- omarchy-classic-desktop 0.2.0
 -- Floating, stacking, work-area clamp. Loaded from hyprland.lua via a
 -- marked `require("classic")` block. Does not replace OCD's ocd.lua.
 
@@ -164,11 +164,14 @@ hl.config({
 })
 
 -- Titlebar sits outside the client so app CSDs (JetBrains) cannot cover it.
+-- Double-click the bar (not a button) toggles work-area maximize, same as
+-- the yellow titlebar button. hyprbars on_double_click is a shell command.
 if hl.plugin and hl.plugin.hyprbars then
   hl.config({
     plugin = {
       hyprbars = {
         bar_part_of_window = false,
+        on_double_click = helper .. " maximize",
       },
     },
   })
