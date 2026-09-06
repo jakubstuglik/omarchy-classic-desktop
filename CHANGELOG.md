@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1 — 2026-09-06
+
+- Dragged pin follows the cursor as a transparent copy (the drop line was in the wrong place)
+
 ## 0.5.0 — 2026-09-06
 
 - Drag a pinned taskbar icon to reorder it; the order is saved

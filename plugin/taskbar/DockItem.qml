@@ -27,7 +27,7 @@ Item {
   property int windowCount: 0
   property bool dragging: false
 
-  opacity: dragging ? 0.4 : 1
+  opacity: dragging ? 0.22 : 1
   readonly property bool hovered: mouseArea.containsMouse
   readonly property int iconSize: Style.space(24)
   readonly property int radius: Math.max(6, Style.space(6))
@@ -152,8 +152,13 @@ Item {
         root.hoverPeekEnded()
         root.pinDragStarted()
       }
-      if (root.dragging)
-        root.pinDragMoved(root.mapToItem(parent, mouse.x, mouse.y).x)
+      if (root.dragging) {
+        // Map through the Row (root.parent), not MouseArea.parent (the
+        // DockItem). Using `parent` here made the drop marker track the
+        // cursor as if the row started at the dragged icon, so icons on
+        // the right landed a long way off.
+        root.pinDragMoved(mapToItem(root.parent, mouse.x, mouse.y).x)
+      }
     }
 
     onReleased: function (mouse) {

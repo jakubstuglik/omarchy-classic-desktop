@@ -72,6 +72,9 @@ Item {
   property bool peekIconHovered: false
   property int pinDragFrom: -1
   property int pinDropGap: -1
+  property real pinDragX: 0
+  property string pinDragIcon: ""
+  property string pinDragLabel: ""
 
   readonly property int barHeight: Style.space(48)
   readonly property int itemWidth: Style.space(68)
@@ -326,10 +329,13 @@ Item {
     root.closeContextMenu()
     root.pinDragFrom = root.pinIndexOf(item.desktopId)
     root.pinDropGap = root.pinDragFrom
+    root.pinDragIcon = item.icon || ""
+    root.pinDragLabel = item.label || ""
   }
 
   function updatePinDrag(xInRow) {
     if (root.pinDragFrom < 0) return
+    root.pinDragX = xInRow
     root.pinDropGap = root.pinGapAt(xInRow)
   }
 
@@ -338,12 +344,18 @@ Item {
     var gap = root.pinDropGap
     root.pinDragFrom = -1
     root.pinDropGap = -1
+    root.pinDragX = 0
+    root.pinDragIcon = ""
+    root.pinDragLabel = ""
     root.movePinToGap(from, gap)
   }
 
   function cancelPinDrag() {
     root.pinDragFrom = -1
     root.pinDropGap = -1
+    root.pinDragX = 0
+    root.pinDragIcon = ""
+    root.pinDragLabel = ""
   }
 
   function movePinToGap(from, gap) {
@@ -744,6 +756,7 @@ Item {
         peekIconHovered: root.peekIconHovered,
         pinDragFrom: root.pinDragFrom,
         pinDropGap: root.pinDropGap,
+        pinDragX: root.pinDragX,
         pins: pinIds,
         tabs: root.tabs
       })
@@ -872,17 +885,51 @@ Item {
         }
       }
 
-      Rectangle {
-        visible: root.pinDragFrom >= 0 && root.pinDropGap >= 0
-                 && root.pinDropGap !== root.pinDragFrom
-                 && root.pinDropGap !== root.pinDragFrom + 1
-        x: tabsRow.x + root.pinDropGap * (root.itemWidth + tabsRow.spacing) - 1
-        y: tabsRow.y + Style.space(6)
-        width: 2
-        height: tabsRow.height - Style.space(12)
-        radius: 1
-        color: Color.accent
-        z: 20
+      Item {
+        id: pinDragGhost
+        visible: root.pinDragFrom >= 0
+        x: tabsRow.x + root.pinDragX - width / 2
+        y: tabsRow.y
+        width: root.itemWidth
+        height: tabsRow.height
+        z: 30
+        opacity: 0.72
+
+        Rectangle {
+          anchors.horizontalCenter: parent.horizontalCenter
+          anchors.verticalCenter: parent.verticalCenter
+          width: parent.width - Style.space(6)
+          height: parent.height - Style.space(8)
+          radius: Math.max(6, Style.space(6))
+          color: Util.alpha(Color.foreground, 0.12)
+        }
+
+        Column {
+          anchors.horizontalCenter: parent.horizontalCenter
+          anchors.verticalCenter: parent.verticalCenter
+          anchors.verticalCenterOffset: -Style.space(1)
+          spacing: Style.space(2)
+
+          Image {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: Style.space(24)
+            height: Style.space(24)
+            fillMode: Image.PreserveAspectFit
+            asynchronous: true
+            source: root.pinDragIcon
+          }
+
+          Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: pinDragGhost.width - Style.space(8)
+            horizontalAlignment: Text.AlignHCenter
+            elide: Text.ElideRight
+            text: root.pinDragLabel
+            font.pixelSize: Math.max(9, Style.font.title - 5)
+            font.family: Style.font.family
+            color: Color.foreground
+          }
+        }
       }
     }
   }
