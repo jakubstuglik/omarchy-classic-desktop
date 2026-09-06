@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.3 — 2026-09-06
+
+- Load hyprbars on session start so titlebars show after login
+
 ## 0.7.2 — 2026-09-06
 
 - Drop the invalid `no_xdg_drags` window rule that showed a config error bar at login
