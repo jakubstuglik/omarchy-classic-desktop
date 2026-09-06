@@ -1,4 +1,4 @@
--- omarchy-classic-desktop 0.7.0
+-- omarchy-classic-desktop 0.7.1
 -- Floating, stacking, one-shot open fit, last size/position. Loaded from
 -- hyprland.lua via a marked `require("classic")` block. Does not replace
 -- OCD's ocd.lua.
@@ -8,10 +8,28 @@ local geom_dir = os.getenv("HOME") .. "/.local/state/ocd-classic"
 local geom_path = geom_dir .. "/last-geom.json"
 local last_geom = {}
 
+local function as_int(n)
+  n = tonumber(n)
+  if n == nil then
+    return 0
+  end
+  if n >= 0 then
+    return math.floor(n + 0.5)
+  end
+  return math.ceil(n - 0.5)
+end
+
 -- Classic desktop: every window floats. Tiling is not used.
 o.window(".*", {
   float = true,
   center = true,
+})
+
+-- Disable CSD-driven drags (Chromium/Electron). Set as a window rule, not
+-- set_prop on every map — a string max_size/no_xdg_drags value pops
+-- Hyprland "property" error toasts.
+o.window("(chromium|google-chrome|brave-browser|brave|spotify|code|discord|vesktop)", {
+  no_xdg_drags = true,
 })
 
 -- GTK apps should not draw a second titlebar; hyprbars is the frame.
@@ -22,9 +40,9 @@ local function vec(v)
     return 0, 0
   end
   if v.x ~= nil then
-    return tonumber(v.x) or 0, tonumber(v.y) or 0
+    return as_int(v.x), as_int(v.y)
   end
-  return tonumber(v[1]) or 0, tonumber(v[2]) or 0
+  return as_int(v[1]), as_int(v[2])
 end
 
 local function reserved_ltrb(mon)
@@ -61,10 +79,10 @@ local function workarea(mon)
   local rl, rt, rr, rb = reserved_ltrb(mon)
   local border = cfg_num("general.border_size", 2)
   local bar = cfg_num("plugin:hyprbars:bar_height", 30)
-  local wx = mon.x + rl + border
-  local wy = mon.y + rt + border + bar
-  local ww = mon.width - rl - rr - (2 * border)
-  local wh = mon.height - rt - rb - (2 * border) - bar
+  local wx = as_int(mon.x + rl + border)
+  local wy = as_int(mon.y + rt + border + bar)
+  local ww = as_int(mon.width - rl - rr - (2 * border))
+  local wh = as_int(mon.height - rt - rb - (2 * border) - bar)
   if ww < 200 then
     ww = 200
   end
@@ -175,25 +193,10 @@ local function others_of_class(w, key)
   return n
 end
 
-local function apply_chrome_props(w, ww, wh)
-  local cls = class_key(w)
-  if cls:find("chromium", 1, true) or cls:find("chrome", 1, true)
-      or cls:find("brave", 1, true) or cls == "spotify" or cls == "code"
-      or cls:find("discord", 1, true) then
-    hl.dispatch(hl.dsp.window.set_prop({
-      window = w,
-      prop = "no_xdg_drags",
-      value = "1",
-    }))
-  end
-  hl.dispatch(hl.dsp.window.set_prop({
-    window = w,
-    prop = "max_size",
-    value = string.format("%d %d", ww, wh),
-  }))
-end
-
 local function place_window(w, nx, ny, nw, nh)
+  nx, ny, nw, nh = as_int(nx), as_int(ny), as_int(nw), as_int(nh)
+  if nw < 200 then nw = 200 end
+  if nh < 120 then nh = 120 end
   force_float(w)
   hl.dispatch(hl.dsp.window.resize({ x = nw, y = nh, window = w }))
   hl.dispatch(hl.dsp.window.move({ x = nx, y = ny, relative = false, window = w }))
@@ -210,7 +213,6 @@ local function fit_new_window(w)
   if wx == nil then
     return
   end
-  apply_chrome_props(w, ww, wh)
 
   local key = class_key(w)
   local saved = (key ~= "") and last_geom[key] or nil
@@ -287,12 +289,15 @@ load_last_geom()
 hl.on("window.open", function(w)
   force_float(w)
   fit_new_window(w)
-  -- GTK/Chromium often apply their own size just after map; re-apply once.
+  -- GTK/Chromium often apply their own size just after map; re-apply once
+  -- from a fresh lookup so the timer does not touch a stale window object.
+  local addr = w and w.address
   local key = class_key(w)
-  if key ~= "" and last_geom[key] ~= nil and others_of_class(w, key) == 0 then
+  if addr and key ~= "" and last_geom[key] ~= nil then
     hl.timer(function()
-      if w ~= nil and w.mapped then
-        fit_new_window(w)
+      local w2 = hl.get_window("address:" .. tostring(addr))
+      if w2 ~= nil and w2.mapped and others_of_class(w2, key) == 0 then
+        fit_new_window(w2)
       end
     end, { timeout = 80, type = "oneshot" })
   end

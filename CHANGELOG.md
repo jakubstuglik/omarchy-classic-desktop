@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1 — 2026-09-06
+
+- Stop Hyprland "property" error toasts on window open (invalid set_prop values)
+
 ## 0.7.0 — 2026-09-06
 
 - Reopening an app restores its last size and position (including maximize)
