@@ -3,6 +3,7 @@
 ## Unreleased
 
 - README screenshots of the taskbar, desktop menu, titlebars, and hover miniatures
+- Replace the v0.9.1 demo video (TMOG, pin drag, maximize, peek)
 
 ## 0.9.1 — 2026-09-06
 
