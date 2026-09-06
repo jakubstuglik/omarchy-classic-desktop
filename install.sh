@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install omarchy-classic-desktop over an existing OCD v1.2+ setup.
+# Install omarchy-classic-desktop over an existing OCD v1.2 setup.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,7 +13,7 @@ usage() {
 Usage: ./install.sh [--dry-run] [--keep-ocd-dock] [--rebackup]
 
 Install the classic taskbar, desktop right-click menu, window helpers, and
-floating/stacking Hyprland behavior. Requires Omarchy 4.x and OCD v1.2 or newer.
+floating/stacking Hyprland behavior. Requires Omarchy 4.x and OCD v1.2.
 
 First install snapshots the current OCD/Hyprland files under
 ~/.local/state/ocd-classic/backup/ so ./uninstall.sh can put OCD back.
@@ -62,7 +62,7 @@ preflight() {
 
   if ! command -v ocd >/dev/null 2>&1 && [[ ! -x "$HOME/.local/share/ocd/bin/ocd" ]]; then
     log "OCD is not installed. Install it first:"
-    log "  curl -fsSL https://raw.githubusercontent.com/fevangelou/ocd/main/boot.sh | bash"
+    log "  curl -fsSL https://raw.githubusercontent.com/fevangelou/ocd/v1.2/boot.sh | bash"
     exit 1
   fi
 
@@ -73,10 +73,13 @@ preflight() {
   if [[ -n "$tag" ]]; then
     log "OCD $tag"
     case "$tag" in
-      v1.2|v1.[2-9]*|v[2-9]*) ;;
-      *)
-        log "Need OCD v1.2 or newer (found $tag)."
+      v1.2) ;;
+      v1.0|v1.1|v1.1.*)
+        log "Need OCD v1.2 (found $tag)."
         exit 1
+        ;;
+      *)
+        log "warning: this overlay is tested on OCD v1.2 (found $tag). Later OCD versions are not promised."
         ;;
     esac
   else

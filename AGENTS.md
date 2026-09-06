@@ -4,11 +4,11 @@ This file is for anyone (human or agent) changing this repo. Read it before edit
 
 ## What this is
 
-A **versioned overlay** on [OCD](https://github.com/fevangelou/ocd) v1.2+ for Omarchy 4.x. It is **not** a single Omarchy marketplace plugin.
+A **versioned overlay** on [OCD](https://github.com/fevangelou/ocd) **v1.2** for Omarchy 4.x. It is **not** a single Omarchy marketplace plugin. Later OCD versions are not promised.
 
 Omarchy's `omarchy plugin add` only clones QML. It cannot declare prerequisites, install Hyprland Lua, or drop binaries. This repo's `install.sh` does that.
 
-**Prerequisite:** OCD must already be installed (`ocd status` shows v1.2 or newer).
+**Prerequisite:** OCD must already be installed (`ocd status` shows **v1.2**).
 
 **Source of truth:** GitHub — https://github.com/jakubstuglik/omarchy-classic-desktop  
 Cursor Origin is an optional mirror only. Origin cannot host public repos yet.

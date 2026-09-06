@@ -4,6 +4,7 @@
 
 - README screenshots of the taskbar, desktop menu, titlebars, and hover miniatures
 - Replace the v0.9.1 demo video (TMOG, pin drag, maximize, peek)
+- README embeds the demo as a video player and states OCD v1.2 as the supported version
 
 ## 0.9.2 — 2026-09-06
 

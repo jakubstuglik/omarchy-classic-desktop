@@ -1,12 +1,15 @@
 # omarchy-classic-desktop
 
-Windows-style desktop for [Omarchy](https://omarchy.org) 4.x, layered on [OCD](https://github.com/fevangelou/ocd) v1.2+. Current release: **v0.9.2**.
+Windows-style desktop for [Omarchy](https://omarchy.org) 4.x, layered on [OCD](https://github.com/fevangelou/ocd). Current release: **v0.9.2**.
+
+**Compatible with OCD v1.2.** That is the version this overlay is tested against. Later OCD releases are not promised.
 
 Icon taskbar, floating windows with titlebars, last size/position, and a right-click menu on the empty wallpaper.
 
 This is **not** a drop-in `omarchy plugin add` package. Omarchy shell plugins cannot install Hyprland Lua or helper binaries, and they have no prerequisites field. This repo is a versioned overlay: Quickshell plugins plus an installer that wires the rest.
 
-![Demo](docs/ocd-classic-desktop-v0.9.1.mp4)
+<video src="https://github.com/jakubstuglik/omarchy-classic-desktop/releases/download/v0.9.1/ocd-classic-desktop-v0.9.1.mp4" width="100%" controls>
+</video>
 
 ![Icon taskbar on the empty desktop](docs/screenshots/desktop.jpg)
 
@@ -27,10 +30,10 @@ This is **not** a drop-in `omarchy plugin add` package. Omarchy shell plugins ca
 ## Prerequisites
 
 1. Omarchy 4.x
-2. [OCD](https://github.com/fevangelou/ocd) **v1.2 or newer** (titlebars, Exposé, settings, `ocd` CLI, hyprbars)
+2. [OCD](https://github.com/fevangelou/ocd) **v1.2** (titlebars, Exposé, settings, `ocd` CLI, hyprbars). Pin the install to v1.2 so a newer OCD tag is not pulled in.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/fevangelou/ocd/main/boot.sh | bash
+curl -fsSL https://raw.githubusercontent.com/fevangelou/ocd/v1.2/boot.sh | bash
 ocd status
 ```
 
