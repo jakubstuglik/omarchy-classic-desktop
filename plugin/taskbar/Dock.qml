@@ -124,23 +124,6 @@ Item {
     return s.indexOf("0x") === 0 ? s : "0x" + s
   }
 
-  function toplevelForAddress(addr) {
-    var want = ocdNormalizeAddress(addr)
-    var raw = (Hyprland.toplevels && Hyprland.toplevels.values) ? Hyprland.toplevels.values : []
-    for (var i = 0; i < raw.length; i++) {
-      if (ocdNormalizeAddress(raw[i].address) === want)
-        return raw[i]
-    }
-    return null
-  }
-
-  function withToplevel(client) {
-    var copy = {}
-    for (var k in client) copy[k] = client[k]
-    copy.toplevel = toplevelForAddress(client.address)
-    return copy
-  }
-
   function pinMatches(pin, identity) {
     var id = String(identity || "").toLowerCase()
     if (!id) return false
@@ -204,7 +187,7 @@ Item {
       for (var j = 0; j < raw.length; j++) {
         var c = raw[j]
         if (pinMatches(p, c.identity)) {
-          windows.push(withToplevel(c))
+          windows.push(c)
           used[c.address] = true
         }
       }
@@ -214,13 +197,13 @@ Item {
     for (var k = 0; k < raw.length; k++) {
       var extra = raw[k]
       if (used[extra.address]) continue
-      var grouped = [withToplevel(extra)]
+      var grouped = [extra]
       used[extra.address] = true
       for (var n = k + 1; n < raw.length; n++) {
         var sib = raw[n]
         if (used[sib.address]) continue
         if (String(sib.identity || "") === String(extra.identity || "") && extra.identity) {
-          grouped.push(withToplevel(sib))
+          grouped.push(sib)
           used[sib.address] = true
         }
       }
@@ -459,6 +442,7 @@ Item {
       return
     }
     peekHideTimer.stop()
+    Hyprland.refreshToplevels()
     root.peekItem = item
     root.peekX = x
   }
@@ -652,12 +636,26 @@ Item {
         lastRealAddress: root.lastRealAddress,
         lastRealIdentity: root.lastRealIdentity,
         activeAddress: root.activeAddress,
+        peek: root.peekItem ? root.peekItem.desktopId : "",
         tabs: root.tabs
       })
+    }
+    function peek(desktopId: string): string {
+      var tabs = root.tabs || []
+      for (var i = 0; i < tabs.length; i++) {
+        if (String(tabs[i].desktopId) === String(desktopId) || String(tabs[i].label) === String(desktopId)) {
+          var n = (tabs[i].windows && tabs[i].windows.length) ? tabs[i].windows.length : 0
+          if (n < 2) return "few:" + n
+          root.openPeek(tabs[i], 600)
+          return "peek:" + tabs[i].desktopId + ":" + n
+        }
+      }
+      return "missing:" + desktopId
     }
   }
 
   Component.onCompleted: {
+    console.log("[ocd-dock] peek-ready")
     refreshFeatureFlag()
     refreshOverrides()
     refreshPins()
@@ -866,6 +864,7 @@ Item {
 
       MouseArea {
         anchors.fill: parent
+        anchors.bottomMargin: root.barHeight
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onClicked: root.closePeek()
       }
@@ -875,7 +874,7 @@ Item {
         width: peekRow.implicitWidth + Style.space(12)
         height: peekRow.implicitHeight + Style.space(12)
         x: Math.max(8, Math.min(root.peekX - width / 2, parent.width - width - 8))
-        y: parent.height - root.barHeight - height - 8
+        y: Math.max(8, parent.height - root.barHeight - height - 8)
         color: Color.background
         border.width: 1
         border.color: Util.alpha(Color.foreground, 0.22)
@@ -903,9 +902,9 @@ Item {
             model: root.peekItem ? (root.peekItem.windows || []) : []
             delegate: WindowPreview {
               required property var modelData
-              toplevel: modelData.toplevel
-              title: modelData.title || root.peekItem.label
-              icon: root.peekItem.icon
+              address: modelData.address || ""
+              title: modelData.title || (root.peekItem ? root.peekItem.label : "")
+              icon: root.peekItem ? root.peekItem.icon : ""
               minimized: !!modelData.minimized
               isActive: modelData.address === root.activeAddress
               onActivated: root.activatePeekWindow(modelData)

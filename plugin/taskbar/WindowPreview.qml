@@ -10,13 +10,14 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import qs.Commons
 import qs.Ui
 
 Item {
   id: root
 
-  property var toplevel: null
+  property string address: ""
   property string title: ""
   property string icon: ""
   property bool minimized: false
@@ -30,6 +31,29 @@ Item {
 
   width: previewW + Style.space(12)
   height: previewH + Style.space(36)
+
+  property var captureToplevel: null
+
+  function refreshCapture() {
+    var want = String(root.address || "")
+    var found = null
+    if (want) {
+      if (want.indexOf("0x") !== 0) want = "0x" + want
+      var raw = (Hyprland.toplevels && Hyprland.toplevels.values) ? Hyprland.toplevels.values : []
+      for (var i = 0; i < raw.length; i++) {
+        var a = String(raw[i].address || "")
+        if (a.indexOf("0x") !== 0) a = "0x" + a
+        if (a === want) {
+          found = raw[i]
+          break
+        }
+      }
+    }
+    captureToplevel = found
+  }
+
+  Component.onCompleted: refreshCapture()
+  onAddressChanged: refreshCapture()
 
   Rectangle {
     anchors.fill: parent
@@ -54,17 +78,15 @@ Item {
       id: capture
       anchors.fill: parent
       visible: hasContent && !previewArea.captureFailed
-      live: root.hovered
+      live: true
       paintCursor: false
-      captureSource: {
-        var t = root.toplevel
-        if (!t) return null
-        return t.wayland ? t.wayland : t
-      }
+      captureSource: (root.captureToplevel && root.captureToplevel.wayland)
+        ? root.captureToplevel.wayland
+        : null
     }
 
     Timer {
-      interval: 800
+      interval: 900
       running: root.visible && !capture.hasContent
       onTriggered: previewArea.captureFailed = true
     }

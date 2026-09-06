@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1 — 2026-09-06
+
+- Fix hover miniatures: do not stash compositor objects on the taskbar model (that broke plugin reload and threw a runtime error when a second window opened)
+
 ## 0.3.0 — 2026-09-06
 
 - Hover a taskbar icon that has more than one window to show live miniatures; click a miniature to raise that window
