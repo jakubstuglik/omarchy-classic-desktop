@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- README screenshots of the taskbar, desktop menu, titlebars, and hover miniatures
+
 ## 0.9.1 — 2026-09-06
 
 - Desktop "Open in Files" / New folder use the default file manager

@@ -6,6 +6,14 @@ Icon taskbar, floating windows with titlebars, last size/position, and a right-c
 
 This is **not** a drop-in `omarchy plugin add` package. Omarchy shell plugins cannot install Hyprland Lua or helper binaries, and they have no prerequisites field. This repo is a versioned overlay: Quickshell plugins plus an installer that wires the rest.
 
+![Icon taskbar on the empty desktop](docs/screenshots/desktop.jpg)
+
+![Desktop right-click menu](docs/screenshots/desktop-menu.jpg)
+
+![Floating window with titlebar](docs/screenshots/window-titlebar.jpg)
+
+![Taskbar hover miniature](docs/screenshots/taskbar-peek.jpg)
+
 ## What you get
 
 - Bottom icon taskbar: pins, app grouping, right-click pin/close, hover miniatures, middle-click close, drag-to-reorder pins
@@ -115,6 +123,7 @@ git remote add cursor https://origin.cursor.com/<your-codebase>/omarchy-classic-
 ```
 plugin/taskbar/     Quickshell service (icons, pins, context menu)
 plugin/desktop/     Quickshell service (empty-desktop right-click menu)
+docs/screenshots/   README images
 bin/ocd-window      maximize/raise/minimize/fit helpers
 hypr/classic.lua    float, stack, clamp
 install.sh          apply on a machine that already has OCD
