@@ -9,14 +9,18 @@
 
 // AppMatcher.js — appId -> {name, icon} resolution for ocd's dock/Exposé.
 //
-// Chromium web apps launched by Omarchy report WM_CLASS/appId in the form
-// chrome-<host>_<path>-<Profile> (confirmed format, see AGENTS.md),
-// which a normal desktop-entry-by-class lookup won't match. ocd keeps a
-// small built-in seed map for Omarchy's stock web apps plus a user-editable
-// override at ~/.config/omarchy/ocd/appid-overrides.json, which is merged
-// on top of (and can override) the built-in seed.
+// Chromium web apps launched by Omarchy report WM_CLASS/appId as
+// chrome-<host>_<path>-<Profile>. That string is not a desktop-file id.
+// clients.sh remaps it to the matching omarchy-launch-webapp desktop id
+// (by URL host, ignoring Chromium profile). This file does the same
+// lookup against DesktopEntries so an unmapped chrome-* id still gets
+// the desktop file's name/icon instead of a generic executable.
 //
-// appid-overrides.json schema — a flat object keyed by the exact appId:
+// Per-machine overrides stay at ~/.config/omarchy/ocd/appid-overrides.json
+// and are merged on top of the built-in seed. Keys are matched
+// case-insensitively.
+//
+// appid-overrides.json schema — a flat object keyed by appId:
 //   {
 //     "chrome-mail.google.com_mail_u_0-Default": { "name": "Gmail", "icon": "gmail" },
 //     "some-other-appid": { "desktopId": "org.some.App" }
@@ -55,6 +59,17 @@ function loadOverrides(rawJson) {
   return merged
 }
 
+function overrideFor(appId, overrides) {
+  if (!appId || !overrides) return undefined
+  if (overrides[appId]) return overrides[appId]
+  var lower = String(appId).toLowerCase()
+  if (overrides[lower]) return overrides[lower]
+  for (var k in overrides) {
+    if (String(k).toLowerCase() === lower) return overrides[k]
+  }
+  return undefined
+}
+
 function entryExec(entry) {
   if (!entry) return ""
   try {
@@ -77,13 +92,81 @@ function fromEntry(entry, fallbackName, fallbackIcon, fallbackId) {
   }
 }
 
+function normHost(netloc) {
+  var host = String(netloc || "").toLowerCase()
+  if (host.indexOf("www.") === 0) host = host.substring(4)
+  return host
+}
+
+function hostFromExec(exec) {
+  var s = String(exec || "")
+  var m = s.match(/https?:\/\/([^\/\s]+)/i)
+  if (m) return normHost(m[1])
+  m = s.match(/--app=(\S+)/)
+  if (!m) return ""
+  var url = m[1].replace(/^['"]|['"]$/g, "")
+  if (url.indexOf("://") < 0) url = "https://" + url
+  m = url.match(/https?:\/\/([^\/\s]+)/i)
+  return m ? normHost(m[1]) : ""
+}
+
+function chromeHost(appId) {
+  var s = String(appId || "")
+  if (s.toLowerCase().indexOf("chrome-") !== 0) return ""
+  s = s.substring(7)
+  s = s.replace(/-(?:Default|Profile_\d+)$/i, "")
+  var cut = s.indexOf("_")
+  var host = cut < 0 ? s : s.substring(0, cut)
+  return normHost(host)
+}
+
+function isWebappExec(exec) {
+  var s = String(exec || "")
+  return s.indexOf("omarchy-launch-webapp") >= 0
+    || s.indexOf("--app=") >= 0
+    || s.indexOf("omarchy-webapp-handler-") >= 0
+}
+
+function findWebappEntry(desktopEntriesApi, host) {
+  if (!desktopEntriesApi || !host) return null
+  try {
+    var model = desktopEntriesApi.applications
+    var values = model && model.values
+    if (!values || !values.length) return null
+    for (var i = 0; i < values.length; i++) {
+      var entry = values[i]
+      var exec = entryExec(entry)
+      if (!isWebappExec(exec)) continue
+      if (hostFromExec(exec) === host) return entry
+    }
+  } catch (e) { /* ignore */ }
+  return null
+}
+
+function lookupEntry(desktopEntriesApi, appId) {
+  if (!desktopEntriesApi || !appId) return null
+  try {
+    var direct = desktopEntriesApi.byId(appId)
+    if (direct) return direct
+  } catch (e) { /* ignore */ }
+  try {
+    if (desktopEntriesApi.heuristicLookup) {
+      var heuristic = desktopEntriesApi.heuristicLookup(appId)
+      if (heuristic) return heuristic
+    }
+  } catch (e) { /* ignore */ }
+  var host = chromeHost(appId)
+  if (host) return findWebappEntry(desktopEntriesApi, host)
+  return null
+}
+
 // resolve(appId, title, desktopEntriesApi) -> { name, icon, desktopId, exec }
 // desktopEntriesApi is the Quickshell.DesktopEntries singleton (or null).
 // Never returns an empty name: falls back to the window title, then the
 // raw appId, so a window never "vanishes" for lack of a match.
 function resolve(appId, title, desktopEntriesApi) {
   var overrides = _overrides || DEFAULT_OVERRIDES
-  var override = appId ? overrides[appId] : undefined
+  var override = overrideFor(appId, overrides)
   var fallbackName = (title && title.length > 0) ? title : (appId || "Unknown")
 
   if (override) {
@@ -99,14 +182,8 @@ function resolve(appId, title, desktopEntriesApi) {
   }
 
   if (desktopEntriesApi && appId) {
-    try {
-      var direct = desktopEntriesApi.byId(appId)
-      if (direct) return fromEntry(direct, fallbackName, "", appId)
-      if (desktopEntriesApi.heuristicLookup) {
-        var heuristic = desktopEntriesApi.heuristicLookup(appId)
-        if (heuristic) return fromEntry(heuristic, fallbackName, "", heuristic.id || appId)
-      }
-    } catch (e) { /* fall through to the generic fallback below */ }
+    var found = lookupEntry(desktopEntriesApi, appId)
+    if (found) return fromEntry(found, fallbackName, "", found.id || appId)
   }
 
   return { name: fallbackName, icon: "", desktopId: appId || "", exec: "" }

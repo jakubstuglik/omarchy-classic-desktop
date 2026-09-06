@@ -1,6 +1,6 @@
 # omarchy-classic-desktop
 
-Windows-style desktop for [Omarchy](https://omarchy.org) 4.x, layered on [OCD](https://github.com/fevangelou/ocd) v1.2+. Current release: **v0.9.1**.
+Windows-style desktop for [Omarchy](https://omarchy.org) 4.x, layered on [OCD](https://github.com/fevangelou/ocd) v1.2+. Current release: **v0.9.2**.
 
 Icon taskbar, floating windows with titlebars, last size/position, and a right-click menu on the empty wallpaper.
 
