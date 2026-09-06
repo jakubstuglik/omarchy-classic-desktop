@@ -212,6 +212,18 @@ Item {
       list.push(makeButton(null, grouped, resolvedExtra.desktopId || extra.identity, extra.title))
     }
     root.tabs = list
+    root.syncPeek()
+  }
+
+  function syncPeek() {
+    if (!root.peekItem) return
+    var live = root.liveTab(root.peekItem)
+    var n = live && live.windows ? live.windows.length : 0
+    if (!live || n < 1) {
+      root.closePeek()
+      return
+    }
+    root.peekItem = live
   }
 
   Process {
@@ -488,6 +500,11 @@ Item {
     root.closePeek()
   }
 
+  function closePeekWindow(win) {
+    if (!win || !win.address) return
+    root.windowAction("close", win.address)
+  }
+
   function contextMenuModel(item) {
     var items = []
     if (!item) return items
@@ -505,7 +522,13 @@ Item {
       items.push({ id: "pin", label: "Pin to taskbar", danger: false, sep: false })
     if (item.running) {
       items.push({ id: "sep-2", label: "", danger: false, sep: true })
-      items.push({ id: "close", label: "Close window", danger: true, sep: false })
+      var n = (item.windows && item.windows.length) ? item.windows.length : 0
+      items.push({
+        id: "close",
+        label: n > 1 ? "Close all" : "Close window",
+        danger: true,
+        sep: false
+      })
     }
     return items
   }
@@ -877,7 +900,7 @@ Item {
       id: peekLayer
       required property var modelData
       screen: modelData
-      visible: root.peekItem !== null && root.peekItem.windows && root.peekItem.windows.length > 1
+      visible: root.peekItem !== null && root.peekItem.windows && root.peekItem.windows.length > 0
       color: "transparent"
       exclusionMode: ExclusionMode.Ignore
       WlrLayershell.namespace: "ocd-classic-taskbar-peek"
@@ -936,6 +959,7 @@ Item {
                 minimized: !!modelData.minimized
                 isActive: modelData.address === root.activeAddress
                 onActivated: root.activatePeekWindow(modelData)
+                onClosed: root.closePeekWindow(modelData)
                 onHoveredChanged: {
                   if (hovered) {
                     root.peekCardHovered = true

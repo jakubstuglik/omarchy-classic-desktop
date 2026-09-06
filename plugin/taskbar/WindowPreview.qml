@@ -24,6 +24,7 @@ Item {
   property bool isActive: false
 
   signal activated()
+  signal closed()
 
   readonly property bool hovered: mouse.containsMouse
   readonly property int previewW: Style.space(180)
@@ -114,7 +115,7 @@ Item {
     Rectangle {
       visible: root.minimized
       anchors.top: parent.top
-      anchors.right: parent.right
+      anchors.left: parent.left
       anchors.margins: Style.space(4)
       radius: Math.max(3, Style.space(3))
       color: Color.accent
@@ -150,6 +151,46 @@ Item {
     z: 10
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
-    onClicked: root.activated()
+    onClicked: function (mouse) {
+      if (closeMouse.containsMouse) {
+        mouse.accepted = true
+        return
+      }
+      root.activated()
+    }
+
+    Rectangle {
+      id: closeBtn
+      visible: root.hovered
+      anchors.top: parent.top
+      anchors.right: parent.right
+      anchors.margins: Style.space(4)
+      width: Style.space(18)
+      height: Style.space(18)
+      radius: Math.max(3, Style.space(3))
+      color: closeMouse.containsMouse ? Color.urgent : Util.alpha(Color.foreground, 0.22)
+      border.width: 1
+      border.color: Util.alpha(Color.foreground, 0.28)
+
+      Text {
+        anchors.centerIn: parent
+        text: "×"
+        color: closeMouse.containsMouse ? Color.background : Color.foreground
+        font.pixelSize: Math.max(12, Style.font.title - 2)
+        font.bold: true
+        font.family: Style.font.family
+      }
+
+      MouseArea {
+        id: closeMouse
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: function (mouse) {
+          mouse.accepted = true
+          root.closed()
+        }
+      }
+    }
   }
 }

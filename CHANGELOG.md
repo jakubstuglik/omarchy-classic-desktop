@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3 — 2026-09-06
+
+- Right-click a grouped taskbar icon: the close action is "Close all"
+- Each hover miniature has an X to close that window
+
 ## 0.3.2 — 2026-09-06
 
 - Keep hover miniatures open when moving the cursor from the icon onto a thumbnail, so you can click one to restore that window
