@@ -454,7 +454,7 @@ Item {
   function openPeek(item, x) {
     if (root.contextItem) return
     item = root.liveTab(item)
-    if (!item || !item.windows || item.windows.length < 2) {
+    if (!item || !item.windows || item.windows.length < 1) {
       root.closePeek()
       return
     }
@@ -681,7 +681,7 @@ Item {
       for (var i = 0; i < tabs.length; i++) {
         if (String(tabs[i].desktopId) === String(desktopId) || String(tabs[i].label) === String(desktopId)) {
           var n = (tabs[i].windows && tabs[i].windows.length) ? tabs[i].windows.length : 0
-          if (n < 2) return "few:" + n
+          if (n < 1) return "few:" + n
           root.openPeek(tabs[i], 600)
           return "peek:" + tabs[i].desktopId + ":" + n
         }
@@ -774,6 +774,10 @@ Item {
             isActive: modelData.isActive
             windowCount: (modelData.windows && modelData.windows.length) ? modelData.windows.length : 0
             onActivated: root.activateItem(modelData)
+            onCloseRequested: {
+              root.closePeek()
+              root.closeItem(modelData)
+            }
             onContextMenuRequested: root.openContextMenu(modelData, tabsRow.x + x + width / 2 - Style.space(94))
             onHoverEntered: {
               if (root.peekItem && root.peekItem.desktopId === modelData.desktopId) {

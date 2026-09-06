@@ -150,10 +150,15 @@ Item {
     anchors.fill: parent
     z: 10
     hoverEnabled: true
+    acceptedButtons: Qt.LeftButton | Qt.MiddleButton
     cursorShape: Qt.PointingHandCursor
     onClicked: function (mouse) {
       if (closeMouse.containsMouse) {
         mouse.accepted = true
+        return
+      }
+      if (mouse.button === Qt.MiddleButton) {
+        root.closed()
         return
       }
       root.activated()

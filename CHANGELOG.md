@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0 — 2026-09-06
+
+- Hover a running taskbar icon to see a miniature even when there is only one window
+- Middle-click a taskbar icon (or a miniature) to close that window / those windows
+
 ## 0.3.3 — 2026-09-06
 
 - Right-click a grouped taskbar icon: the close action is "Close all"

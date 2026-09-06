@@ -33,7 +33,7 @@ The installer:
 - patches OCD’s maximize button to use the work-area helper
 - double-click the titlebar to maximize or restore (same helper)
 - Chromium uses the system title bar (restart the browser after install)
-- Hover a grouped taskbar icon to pick a window from live miniatures
+- Hover a running taskbar icon to see live miniatures (one window or several); click a miniature to raise it, middle-click or the X to close it
 
 Pins stay in `~/.config/omarchy/ocd/dock-pins.json` on each machine. They are not part of this repo.
 

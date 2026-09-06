@@ -32,6 +32,7 @@ Item {
 
   signal activated()
   signal contextMenuRequested()
+  signal closeRequested()
   signal hoverEntered()
   signal hoverPeekRequested()
   signal hoverPeekEnded()
@@ -113,7 +114,7 @@ Item {
         // Immediate keep-alive so moving back from a miniature to this
         // icon does not lose the race against the close timer.
         root.hoverEntered()
-        if (root.windowCount > 1)
+        if (root.windowCount > 0)
           peekTimer.restart()
       } else {
         peekTimer.stop()
@@ -125,6 +126,13 @@ Item {
         peekTimer.stop()
         root.hoverPeekEnded()
         root.contextMenuRequested()
+        return
+      }
+      if (mouse.button === Qt.MiddleButton) {
+        peekTimer.stop()
+        root.hoverPeekEnded()
+        if (root.windowCount > 0)
+          root.closeRequested()
         return
       }
       if (mouse.button === Qt.LeftButton)
