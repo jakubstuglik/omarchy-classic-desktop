@@ -8,8 +8,9 @@ Icon taskbar, floating windows with titlebars, last size/position, and a right-c
 
 This is **not** a drop-in `omarchy plugin add` package. Omarchy shell plugins cannot install Hyprland Lua or helper binaries, and they have no prerequisites field. This repo is a versioned overlay: Quickshell plugins plus an installer that wires the rest.
 
-<video src="https://github.com/jakubstuglik/omarchy-classic-desktop/releases/download/v0.9.1/ocd-classic-desktop-v0.9.1.mp4" width="100%" controls>
-</video>
+https://github.com/user-attachments/assets/66354337-d406-4a4a-8506-59d9683a952c
+
+[Download demo (mp4)](https://github.com/jakubstuglik/omarchy-classic-desktop/releases/download/v0.9.1/ocd-classic-desktop-v0.9.1.mp4)
 
 ![Icon taskbar on the empty desktop](docs/screenshots/desktop.jpg)
 
