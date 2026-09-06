@@ -32,6 +32,7 @@ The installer:
 - unbinds tiling keys and sets click-to-focus
 - patches OCD’s maximize button to use the work-area helper
 - double-click the titlebar to maximize or restore (same helper)
+- Chromium uses the system title bar (restart the browser after install)
 
 Pins stay in `~/.config/omarchy/ocd/dock-pins.json` on each machine. They are not part of this repo.
 

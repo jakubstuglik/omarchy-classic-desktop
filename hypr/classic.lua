@@ -1,5 +1,5 @@
--- omarchy-classic-desktop 0.2.0
--- Floating, stacking, work-area clamp. Loaded from hyprland.lua via a
+-- omarchy-classic-desktop 0.2.1
+-- Floating, stacking, one-shot open fit. Loaded from hyprland.lua via a
 -- marked `require("classic")` block. Does not replace OCD's ocd.lua.
 
 local helper = os.getenv("HOME") .. "/.local/bin/ocd-window"
@@ -9,6 +9,9 @@ o.window(".*", {
   float = true,
   center = true,
 })
+
+-- GTK apps should not draw a second titlebar; hyprbars is the frame.
+hl.env("GTK_CSD", "0")
 
 local function vec(v)
   if type(v) ~= "table" then
@@ -90,7 +93,11 @@ local function skip_fit(w)
   return false
 end
 
-local function clamp_window(w)
+-- One-shot fit when a window first maps. Do not run on a timer or on
+-- title changes: Chromium retitles constantly, and a 250ms clamp of a
+-- near-full-height window always forces y back to the work-area top,
+-- which makes titlebar-drag feel like the window is glued there.
+local function fit_new_window(w)
   if skip_fit(w) then
     return
   end
@@ -107,52 +114,45 @@ local function clamp_window(w)
   if nh > wh then
     nh = wh
   end
-  if nx < wx then
-    nx = wx
-  end
+  -- Keep the hyprbars titlebar out from under the Omarchy bar. Do not
+  -- pull a window back to the top just because its bottom would clip;
+  -- Windows lets you drag a large window into the middle of the screen.
   if ny < wy then
     ny = wy
   end
   if nx + nw > wx + ww then
     nx = wx + ww - nw
   end
-  if ny + nh > wy + wh then
-    ny = wy + wh - nh
-  end
   if nx < wx then
     nx = wx
   end
-  if ny < wy then
-    ny = wy
-  end
-  if nx == cx and ny == cy and nw == cw and nh == ch then
-    return
-  end
   force_float(w)
+  local cls = string.lower(tostring(w.class or ""))
+  if cls:find("chromium", 1, true) or cls:find("chrome", 1, true)
+      or cls:find("brave", 1, true) or cls == "spotify" or cls == "code"
+      or cls:find("discord", 1, true) then
+    hl.dispatch(hl.dsp.window.set_prop({
+      window = w,
+      prop = "no_xdg_drags",
+      value = "1",
+    }))
+  end
   hl.dispatch(hl.dsp.window.set_prop({
     window = w,
     prop = "max_size",
     value = string.format("%d %d", ww, wh),
   }))
-  hl.dispatch(hl.dsp.window.resize({ x = nw, y = nh, window = w }))
-  hl.dispatch(hl.dsp.window.move({ x = nx, y = ny, relative = false, window = w }))
-end
-
-local function float_and_fit_all()
-  for _, w in ipairs(hl.get_windows() or {}) do
-    force_float(w)
-    clamp_window(w)
+  if nx ~= cx or ny ~= cy or nw ~= cw or nh ~= ch then
+    hl.dispatch(hl.dsp.window.resize({ x = nw, y = nh, window = w }))
+    hl.dispatch(hl.dsp.window.move({ x = nx, y = ny, relative = false, window = w }))
   end
 end
 
 hl.on("window.open", function(w)
   force_float(w)
-  clamp_window(w)
+  fit_new_window(w)
 end)
 hl.on("window.open_early", force_float)
-hl.on("window.title", clamp_window)
-float_and_fit_all()
-hl.timer(float_and_fit_all, { timeout = 250, type = "repeat" })
 
 -- Snap floating windows to each other and to screen edges.
 hl.config({

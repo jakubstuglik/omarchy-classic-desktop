@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 — 2026-09-06
+
+- Stop the work-area clamp from fighting titlebar drag (windows stay where you put them)
+- Prefer a real titlebar: GTK_CSD=0, Chromium system frame, no CSD-tab dragging
+
 ## 0.2.0 — 2026-09-05
 
 - Double-click a window titlebar to maximize or restore (same work-area maximize as the yellow button)

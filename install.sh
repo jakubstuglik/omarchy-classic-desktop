@@ -165,6 +165,41 @@ else:
 PY
 }
 
+patch_chromium_frame() {
+  if dry; then
+    log "[dry-run] set Chromium custom_chrome_frame=false (system title bar)"
+    return 0
+  fi
+  python3 - <<'PY'
+import json, os, pathlib
+home = pathlib.Path(os.environ["HOME"])
+changed = []
+for rel in (
+    ".config/chromium/Default/Preferences",
+    ".config/google-chrome/Default/Preferences",
+    ".config/BraveSoftware/Brave-Browser/Default/Preferences",
+):
+    path = home / rel
+    if not path.is_file():
+        continue
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        continue
+    browser = data.setdefault("browser", {})
+    if browser.get("custom_chrome_frame") is False:
+        continue
+    browser["custom_chrome_frame"] = False
+    path.write_text(json.dumps(data, separators=(",", ":")))
+    changed.append(str(path))
+if changed:
+    print("set system title bar in:", ", ".join(changed))
+    print("restart Chromium for the frame change to apply")
+else:
+    print("chromium preferences already use system title bar, or no profile found")
+PY
+}
+
 install_files() {
   if dry; then
     log "[dry-run] install plugin $PLUGIN_ID"
@@ -219,6 +254,7 @@ marker_append "$HYPR_MAIN" "$MARKER" 'require("classic")'
 marker_append "$HYPR_BINDINGS" "$MARKER" $'-- Tiling is disabled. These defaults would put windows back in the layout.\nhl.unbind("SUPER + T") -- was: toggle window floating/tiling\nhl.unbind("SUPER + J") -- was: toggle window split\nhl.unbind("SUPER + P") -- was: pseudo window\nhl.unbind("SUPER + L") -- was: toggle workspace layout (dwindle/scrolling)\nhl.unbind("SUPER + CTRL + F") -- was: tiled full screen'
 marker_append "$HYPR_INPUT" "$MARKER" $'-- Click-to-focus like Windows. Hovering a window no longer steals focus.\nhl.config({\n  input = {\n    follow_mouse = 0,\n    touchpad = {\n      clickfinger_behavior = false,\n    },\n  },\n})'
 patch_ocd_lua
+patch_chromium_frame
 enable_plugin
 reload_hypr
 
