@@ -2,6 +2,7 @@
 # Shared paths and helpers for install.sh / uninstall.sh.
 
 PLUGIN_ID="io.github.jstuglik.taskbar"
+DESKTOP_PLUGIN_ID="io.github.jstuglik.desktop"
 OCD_DOCK_ID="io.github.fevangelou.ocd.dock"
 MARKER="ocd-classic"
 
@@ -16,6 +17,7 @@ HYPR_BINDINGS="$HYPR_DIR/bindings.lua"
 HYPR_INPUT="$HYPR_DIR/input.lua"
 
 PLUGIN_DST="$HOME/.config/omarchy/plugins/$PLUGIN_ID"
+DESKTOP_PLUGIN_DST="$HOME/.config/omarchy/plugins/$DESKTOP_PLUGIN_ID"
 BIN_DIR="$HOME/.local/bin"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ocd-classic"
 REF_FILE="$STATE_DIR/installed-ref"

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.1 — 2026-09-06
+
+- Desktop "Open in Files" / New folder use the default file manager
+
+## 0.9.0 — 2026-09-06
+
+- Desktop right-click: Browse wallpaper... picks any image file
+
+## 0.8.0 — 2026-09-06
+
+- Right-click the empty desktop for a Windows-style menu (new folder, wallpaper, theme, display, Files, Terminal)
+
 ## 0.7.3 — 2026-09-06
 
 - Load hyprbars on session start so titlebars show after login

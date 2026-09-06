@@ -12,8 +12,8 @@ usage() {
   cat <<EOF
 Usage: ./install.sh [--dry-run] [--keep-ocd-dock] [--rebackup]
 
-Install the classic taskbar, window helpers, and floating/stacking Hyprland
-behavior. Requires Omarchy 4.x and OCD v1.2 or newer.
+Install the classic taskbar, desktop right-click menu, window helpers, and
+floating/stacking Hyprland behavior. Requires Omarchy 4.x and OCD v1.2 or newer.
 
 First install snapshots the current OCD/Hyprland files under
 ~/.local/state/ocd-classic/backup/ so ./uninstall.sh can put OCD back.
@@ -203,24 +203,28 @@ PY
 install_files() {
   if dry; then
     log "[dry-run] install plugin $PLUGIN_ID"
+    log "[dry-run] install plugin $DESKTOP_PLUGIN_ID"
     log "[dry-run] install helpers to $BIN_DIR"
     log "[dry-run] install $HYPR_CLASSIC"
     return 0
   fi
-  mkdir -p "$PLUGIN_DST" "$BIN_DIR" "$STATE_DIR" "$HYPR_DIR"
+  mkdir -p "$PLUGIN_DST" "$DESKTOP_PLUGIN_DST" "$BIN_DIR" "$STATE_DIR" "$HYPR_DIR"
   rm -rf "$PLUGIN_DST"
   cp -a "$ROOT/plugin/taskbar/." "$PLUGIN_DST/"
   chmod +x "$PLUGIN_DST/clients.sh"
+  rm -rf "$DESKTOP_PLUGIN_DST"
+  cp -a "$ROOT/plugin/desktop/." "$DESKTOP_PLUGIN_DST/"
+  chmod +x "$DESKTOP_PLUGIN_DST/desktop.sh"
   install -m 0755 "$ROOT/bin/ocd-window" "$BIN_DIR/ocd-window"
   install -m 0755 "$ROOT/bin/ocd-raise-window" "$BIN_DIR/ocd-raise-window"
   install -m 0644 "$ROOT/hypr/classic.lua" "$HYPR_CLASSIC"
-  printf 'version=%s\nplugin=%s\n' "$VERSION" "$PLUGIN_ID" >"$REF_FILE"
-  log "installed plugin, helpers, and classic.lua"
+  printf 'version=%s\nplugin=%s\ndesktopPlugin=%s\n' "$VERSION" "$PLUGIN_ID" "$DESKTOP_PLUGIN_ID" >"$REF_FILE"
+  log "installed plugins, helpers, and classic.lua"
 }
 
 enable_plugin() {
   if dry; then
-    log "[dry-run] enable $PLUGIN_ID, disable $OCD_DOCK_ID"
+    log "[dry-run] enable $PLUGIN_ID and $DESKTOP_PLUGIN_ID, disable $OCD_DOCK_ID"
     return 0
   fi
   if [[ "$KEEP_OCD_DOCK" -eq 0 ]] && command -v ocd >/dev/null 2>&1; then
@@ -229,7 +233,23 @@ enable_plugin() {
   fi
   if command -v omarchy-shell >/dev/null 2>&1; then
     omarchy-shell shell rescanPlugins || true
-    omarchy-shell shell setPluginEnabled "$PLUGIN_ID" true || true
+    # rescanPlugins is async; setPluginEnabled returns "unknown" until the
+    # registry has picked up the copied manifests.
+    enable_shell_plugin() {
+      local id="$1" i out
+      for i in 1 2 3 4 5 6 7 8 9 10; do
+        out="$(omarchy-shell shell setPluginEnabled "$id" true 2>/dev/null || true)"
+        if [[ "$out" == "ok" ]]; then
+          log "enabled $id"
+          return 0
+        fi
+        sleep 0.2
+      done
+      log "warning: could not enable $id (last: ${out:-empty})"
+      return 0
+    }
+    enable_shell_plugin "$PLUGIN_ID"
+    enable_shell_plugin "$DESKTOP_PLUGIN_ID"
     if [[ "$KEEP_OCD_DOCK" -eq 0 ]]; then
       omarchy-shell shell setPluginEnabled "$OCD_DOCK_ID" false || true
     fi

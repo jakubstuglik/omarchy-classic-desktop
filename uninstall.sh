@@ -18,7 +18,7 @@ Restore OCD as it was before this overlay:
   - stock OCD dock + hypr/ocd.lua (from the snapshot, fetched at install)
   - hyprland.lua / bindings.lua / input.lua from the pre-install snapshot,
     with overlay hunks stripped
-  - overlay plugin, classic.lua, and ocd-window helpers removed
+  - overlay taskbar + desktop-menu plugins, classic.lua, and ocd-window helpers removed
   - OCD dock feature re-enabled
 
 Pins in ~/.config/omarchy/ocd/dock-pins.json are left alone.

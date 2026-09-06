@@ -187,17 +187,18 @@ PY
 
 remove_added_files() {
   if dry; then
-    log "[dry-run] remove overlay plugin, helpers, classic.lua"
+    log "[dry-run] remove overlay plugins, helpers, classic.lua"
     return 0
   fi
   if command -v omarchy-shell >/dev/null 2>&1; then
     omarchy-shell shell setPluginEnabled "$PLUGIN_ID" false || true
+    omarchy-shell shell setPluginEnabled "$DESKTOP_PLUGIN_ID" false || true
   fi
-  rm -rf "$PLUGIN_DST"
+  rm -rf "$PLUGIN_DST" "$DESKTOP_PLUGIN_DST"
   rm -f "$HYPR_CLASSIC"
   # OCD does not ship these helpers. Always remove the overlay copies.
   rm -f "$BIN_DIR/ocd-window" "$BIN_DIR/ocd-raise-window"
-  log "removed overlay plugin, helpers, and classic.lua"
+  log "removed overlay plugins, helpers, and classic.lua"
 }
 
 restore_ocd_owned() {

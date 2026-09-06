@@ -17,6 +17,7 @@ Cursor Origin is an optional mirror only. Origin cannot host public repos yet.
 
 ```
 plugin/taskbar/     Quickshell service id: io.github.jstuglik.taskbar (hover miniatures when an icon has 2+ windows)
+plugin/desktop/     Quickshell service id: io.github.jstuglik.desktop (empty-desktop right-click menu)
 bin/ocd-window      maximize / raise / minimize / fit helpers
 hypr/classic.lua    float, stack, one-shot open fit, titlebar double-click maximize
 install.sh          apply overlay; snapshot OCD files first
@@ -27,6 +28,7 @@ lib/backup.sh       snapshot / fetch stock OCD / strip overlay hunks
 Live copies after install:
 
 - `~/.config/omarchy/plugins/io.github.jstuglik.taskbar/`
+- `~/.config/omarchy/plugins/io.github.jstuglik.desktop/`
 - `~/.config/hypr/classic.lua` (hooked from `hyprland.lua` via `>>> ocd-classic >>>`)
 - `~/.local/bin/ocd-window`, `ocd-raise-window`
 - snapshot: `~/.local/state/ocd-classic/backup/` (`pre/` + `stock/`)
@@ -42,7 +44,7 @@ Live copies after install:
 ## Workflow
 
 1. Change files **in this repo**, or copy working live plugin files back here before committing.
-2. `omarchy plugin validate plugin/taskbar`
+2. `omarchy plugin validate plugin/taskbar` and `omarchy plugin validate plugin/desktop`
 3. `./install.sh --dry-run` then `./install.sh` on a test machine.
 4. Bump version (see below), conventional commit, tag, push.
 
@@ -56,6 +58,7 @@ Keep these in lockstep for every release:
 |---|---|
 | `VERSION` | `X.Y.Z` |
 | `plugin/taskbar/manifest.json` `version` | same |
+| `plugin/desktop/manifest.json` `version` | same |
 | `CHANGELOG.md` | human notes |
 | git tag `vX.Y.Z` | annotated tag, pushed |
 
@@ -79,7 +82,7 @@ optional body
 
 Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `style`.
 
-Scopes (use when it helps): `taskbar`, `hypr`, `install`, `uninstall`.
+Scopes (use when it helps): `taskbar`, `desktop`, `hypr`, `install`, `uninstall`.
 
 Examples:
 

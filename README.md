@@ -1,8 +1,18 @@
 # omarchy-classic-desktop
 
-Windows-style taskbar and floating-window behavior for [Omarchy](https://omarchy.org) 4.x, layered on [OCD](https://github.com/fevangelou/ocd) v1.2+.
+Windows-style desktop for [Omarchy](https://omarchy.org) 4.x, layered on [OCD](https://github.com/fevangelou/ocd) v1.2+. Current release: **v0.9.1**.
 
-This is **not** a drop-in `omarchy plugin add` package by itself. Omarchy shell plugins cannot install Hyprland Lua or helper binaries, and they have no prerequisites field. This repo is a versioned overlay: a Quickshell taskbar plugin plus an installer that wires the rest.
+Icon taskbar, floating windows with titlebars, last size/position, and a right-click menu on the empty wallpaper.
+
+This is **not** a drop-in `omarchy plugin add` package. Omarchy shell plugins cannot install Hyprland Lua or helper binaries, and they have no prerequisites field. This repo is a versioned overlay: Quickshell plugins plus an installer that wires the rest.
+
+## What you get
+
+- Bottom icon taskbar: pins, app grouping, right-click pin/close, hover miniatures, middle-click close, drag-to-reorder pins
+- Floating windows with OCD titlebars; double-click the titlebar to maximize into the work area
+- Reopening an app restores its last size and position (including maximize)
+- Right-click empty desktop: New folder, Change wallpaper, Browse wallpaper…, Next wallpaper, Change theme, Display settings, Open in Files, Open Terminal here
+- Click-to-focus, tiling keys unbound, Chromium uses the system title bar
 
 ## Prerequisites
 
@@ -26,6 +36,7 @@ cd ~/Projects/omarchy-classic-desktop
 The installer:
 
 - copies the taskbar plugin as `io.github.jstuglik.taskbar`
+- copies the desktop-menu plugin as `io.github.jstuglik.desktop`
 - disables OCD’s own dock so `ocd update` does not overwrite this taskbar
 - installs `~/.local/bin/ocd-window` and `ocd-raise-window`
 - installs `~/.config/hypr/classic.lua` and hooks it from `hyprland.lua`
@@ -36,6 +47,7 @@ The installer:
 - Hover a running taskbar icon to see live miniatures (one window or several); click a miniature to raise it, middle-click or the X to close it
 - Drag pinned taskbar icons to reorder them; the others slide aside and leave a gap under the cursor
 - Closing an app remembers its size and position for the next open
+- Right-click empty desktop: new folder, wallpaper (theme set or any image file), theme, display settings, Files, Terminal
 
 Pins stay in `~/.config/omarchy/ocd/dock-pins.json` on each machine. They are not part of this repo.
 
@@ -63,10 +75,11 @@ If you never ran `./install.sh` on a machine that was already edited by hand, un
 |---|---|
 | `VERSION` | overlay release |
 | `plugin/taskbar/manifest.json` `version` | same number |
+| `plugin/desktop/manifest.json` `version` | same number |
 | `CHANGELOG.md` | human notes |
 | git tag `v0.1.0` | installable snapshot |
 
-`omarchy plugin validate plugin/taskbar` checks the Quickshell half. Lua and helpers only apply through `./install.sh`.
+`omarchy plugin validate plugin/taskbar` and `omarchy plugin validate plugin/desktop` check the Quickshell half. Lua and helpers only apply through `./install.sh`.
 
 After editing the live plugin on a machine, copy the working files back here, bump the version, commit, and tag.
 
@@ -101,6 +114,7 @@ git remote add cursor https://origin.cursor.com/<your-codebase>/omarchy-classic-
 
 ```
 plugin/taskbar/     Quickshell service (icons, pins, context menu)
+plugin/desktop/     Quickshell service (empty-desktop right-click menu)
 bin/ocd-window      maximize/raise/minimize/fit helpers
 hypr/classic.lua    float, stack, clamp
 install.sh          apply on a machine that already has OCD
