@@ -78,6 +78,9 @@ Item {
 
   readonly property int barHeight: Style.space(48)
   readonly property int itemWidth: Style.space(68)
+  readonly property int tabStride: itemWidth + Style.space(2)
+
+  ListModel { id: tabModel }
 
   function refreshFeatureFlag() { featureReadProc.running = true }
   function refreshOverrides() { overridesReadProc.running = true }
@@ -218,7 +221,62 @@ Item {
     }
     if (root.pinDragFrom >= 0) return
     root.tabs = list
+    root.syncTabModel(list)
     root.syncPeek()
+  }
+
+  function tabByDesktopId(desktopId) {
+    var id = String(desktopId || "")
+    var list = root.tabs || []
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].desktopId) === id) return list[i]
+    }
+    return null
+  }
+
+  function tabVisualSlot(index, kind) {
+    var from = root.pinDragFrom
+    if (from < 0 || String(kind) !== "pinned")
+      return index
+    if (index === from)
+      return index
+    var gap = root.pinDropGap
+    if (gap < 0) gap = from
+    var insert = gap
+    if (insert > from) insert -= 1
+    var compacted = index < from ? index : index - 1
+    var slot = compacted
+    if (slot >= insert) slot += 1
+    return slot
+  }
+
+  function tabVisualX(index, kind) {
+    return root.tabVisualSlot(index, kind) * root.tabStride
+  }
+
+  function syncTabModel(list) {
+    var i, j, id, found
+    if (tabModel.count !== list.length) {
+      tabModel.clear()
+      for (i = 0; i < list.length; i++)
+        tabModel.append({ desktopId: String(list[i].desktopId || "") })
+      return
+    }
+    for (i = 0; i < list.length; i++) {
+      id = String(list[i].desktopId || "")
+      if (String(tabModel.get(i).desktopId) === id) continue
+      found = -1
+      for (j = i + 1; j < tabModel.count; j++) {
+        if (String(tabModel.get(j).desktopId) === id) { found = j; break }
+      }
+      if (found < 0) {
+        tabModel.clear()
+        for (j = 0; j < list.length; j++)
+          tabModel.append({ desktopId: String(list[j].desktopId || "") })
+        return
+      }
+      tabModel.move(found, i, 1)
+    }
   }
 
   function syncPeek() {
@@ -342,12 +400,13 @@ Item {
   function finishPinDrag() {
     var from = root.pinDragFrom
     var gap = root.pinDropGap
+    root.movePinToGap(from, gap)
     root.pinDragFrom = -1
     root.pinDropGap = -1
     root.pinDragX = 0
     root.pinDragIcon = ""
     root.pinDragLabel = ""
-    root.movePinToGap(from, gap)
+    root.recomputeTabs()
   }
 
   function cancelPinDrag() {
@@ -370,7 +429,6 @@ Item {
     next.splice(insert, 0, pin)
     root.pins = next
     root.persistPins()
-    root.recomputeTabs()
   }
 
   Process { id: launchProc }
@@ -837,47 +895,62 @@ Item {
         color: Util.alpha(Color.foreground, 0.18)
       }
 
-      Row {
+      Item {
         id: tabsRow
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        spacing: Style.space(2)
+        width: {
+          var n = root.tabs.length
+          if (n <= 0) return 0
+          return n * root.itemWidth + (n - 1) * Style.space(2)
+        }
 
         Repeater {
-          model: root.tabs
+          model: tabModel
           delegate: DockItem {
-            required property var modelData
             required property int index
+            required property string desktopId
+            readonly property var modelData: root.tabByDesktopId(desktopId)
             tabIndex: index
+            x: root.tabVisualX(index, modelData && modelData.kind ? modelData.kind : "")
+            y: 0
             width: root.itemWidth
             height: tabsRow.height
-            label: modelData.label
-            icon: modelData.icon
-            pinned: modelData.kind === "pinned"
-            running: modelData.running
-            isMinimized: modelData.isMinimized
-            isActive: modelData.isActive
-            windowCount: (modelData.windows && modelData.windows.length) ? modelData.windows.length : 0
-            onActivated: root.activateItem(modelData)
+            z: dragging ? 0 : 1
+            label: modelData ? modelData.label : ""
+            icon: modelData ? modelData.icon : ""
+            pinned: modelData ? modelData.kind === "pinned" : false
+            running: modelData ? modelData.running : false
+            isMinimized: modelData ? modelData.isMinimized : false
+            isActive: modelData ? modelData.isActive : false
+            windowCount: modelData && modelData.windows ? modelData.windows.length : 0
+
+            Behavior on x {
+              enabled: root.pinDragFrom >= 0
+              NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+            }
+
+            onActivated: if (modelData) root.activateItem(modelData)
             onCloseRequested: {
+              if (!modelData) return
               root.closePeek()
               root.closeItem(modelData)
             }
-            onPinDragStarted: root.beginPinDrag(modelData)
+            onPinDragStarted: if (modelData) root.beginPinDrag(modelData)
             onPinDragMoved: function (xInParent) { root.updatePinDrag(xInParent) }
             onPinDragFinished: root.finishPinDrag()
             onPinDragCancelled: root.cancelPinDrag()
-            onContextMenuRequested: root.openContextMenu(modelData, tabsRow.x + x + width / 2 - Style.space(94))
+            onContextMenuRequested: if (modelData) root.openContextMenu(modelData, tabsRow.x + x + width / 2 - Style.space(94))
             onHoverEntered: {
-              if (root.peekItem && root.peekItem.desktopId === modelData.desktopId) {
+              if (modelData && root.peekItem && root.peekItem.desktopId === modelData.desktopId) {
                 root.peekIconHovered = true
                 peekHideTimer.stop()
               }
             }
-            onHoverPeekRequested: root.openPeek(modelData, tabsRow.x + x + width / 2)
+            onHoverPeekRequested: if (modelData) root.openPeek(modelData, tabsRow.x + x + width / 2)
             onHoverPeekEnded: {
-              if (root.peekItem && root.peekItem.desktopId === modelData.desktopId)
+              if (modelData && root.peekItem && root.peekItem.desktopId === modelData.desktopId)
                 root.peekIconHovered = false
               root.scheduleClosePeek()
             }

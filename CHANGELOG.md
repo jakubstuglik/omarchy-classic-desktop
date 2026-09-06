@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0 — 2026-09-06
+
+- While dragging a pin, the other icons slide to leave a gap where it would drop
+
 ## 0.5.1 — 2026-09-06
 
 - Dragged pin follows the cursor as a transparent copy (the drop line was in the wrong place)
