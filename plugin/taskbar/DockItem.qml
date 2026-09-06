@@ -32,6 +32,7 @@ Item {
 
   signal activated()
   signal contextMenuRequested()
+  signal hoverEntered()
   signal hoverPeekRequested()
   signal hoverPeekEnded()
 
@@ -108,8 +109,12 @@ Item {
     cursorShape: Qt.PointingHandCursor
     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
     onContainsMouseChanged: {
-      if (containsMouse && root.windowCount > 1) {
-        peekTimer.restart()
+      if (containsMouse) {
+        // Immediate keep-alive so moving back from a miniature to this
+        // icon does not lose the race against the close timer.
+        root.hoverEntered()
+        if (root.windowCount > 1)
+          peekTimer.restart()
       } else {
         peekTimer.stop()
         root.hoverPeekEnded()

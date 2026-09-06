@@ -69,6 +69,7 @@ Item {
   property var peekItem: null
   property real peekX: 0
   property bool peekCardHovered: false
+  property bool peekIconHovered: false
 
   readonly property int barHeight: Style.space(48)
   readonly property int itemWidth: Style.space(68)
@@ -434,6 +435,10 @@ Item {
     root.contextItem = null
   }
 
+  function peekShouldStayOpen() {
+    return root.peekIconHovered || root.peekCardHovered
+  }
+
   function openPeek(item, x) {
     if (root.contextItem) return
     item = root.liveTab(item)
@@ -445,24 +450,30 @@ Item {
     Hyprland.refreshToplevels()
     root.peekItem = item
     root.peekX = x
+    root.peekIconHovered = true
   }
 
   function closePeek() {
     peekHideTimer.stop()
     root.peekItem = null
     root.peekCardHovered = false
+    root.peekIconHovered = false
   }
 
   function scheduleClosePeek() {
+    if (root.peekShouldStayOpen()) {
+      peekHideTimer.stop()
+      return
+    }
     peekHideTimer.restart()
   }
 
   Timer {
     id: peekHideTimer
-    interval: 280
+    interval: 400
     repeat: false
     onTriggered: {
-      if (!root.peekCardHovered)
+      if (!root.peekShouldStayOpen())
         root.closePeek()
     }
   }
@@ -637,6 +648,8 @@ Item {
         lastRealIdentity: root.lastRealIdentity,
         activeAddress: root.activeAddress,
         peek: root.peekItem ? root.peekItem.desktopId : "",
+        peekCardHovered: root.peekCardHovered,
+        peekIconHovered: root.peekIconHovered,
         tabs: root.tabs
       })
     }
@@ -739,8 +752,18 @@ Item {
             windowCount: (modelData.windows && modelData.windows.length) ? modelData.windows.length : 0
             onActivated: root.activateItem(modelData)
             onContextMenuRequested: root.openContextMenu(modelData, tabsRow.x + x + width / 2 - Style.space(94))
+            onHoverEntered: {
+              if (root.peekItem && root.peekItem.desktopId === modelData.desktopId) {
+                root.peekIconHovered = true
+                peekHideTimer.stop()
+              }
+            }
             onHoverPeekRequested: root.openPeek(modelData, tabsRow.x + x + width / 2)
-            onHoverPeekEnded: root.scheduleClosePeek()
+            onHoverPeekEnded: {
+              if (root.peekItem && root.peekItem.desktopId === modelData.desktopId)
+                root.peekIconHovered = false
+              root.scheduleClosePeek()
+            }
           }
         }
       }
@@ -862,52 +885,64 @@ Item {
       WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
       anchors { top: true; bottom: true; left: true; right: true }
 
-      MouseArea {
-        anchors.fill: parent
-        anchors.bottomMargin: root.barHeight
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        onClicked: root.closePeek()
-      }
+      // Full-screen layer, but only the card + the gap down to the
+      // taskbar take input. Everything else (including the bar itself)
+      // stays click-through so mapping this overlay does not steal the
+      // pointer off the icon the user is still hovering.
+      mask: Region { item: peekHit }
 
-      Rectangle {
-        id: peekCard
-        width: peekRow.implicitWidth + Style.space(12)
-        height: peekRow.implicitHeight + Style.space(12)
+      Item {
+        id: peekHit
+        width: peekCard.width
+        height: peekCard.height + 8
         x: Math.max(8, Math.min(root.peekX - width / 2, parent.width - width - 8))
-        y: Math.max(8, parent.height - root.barHeight - height - 8)
-        color: Color.background
-        border.width: 1
-        border.color: Util.alpha(Color.foreground, 0.22)
-        radius: Math.max(6, Style.space(6))
+        y: Math.max(8, parent.height - root.barHeight - height)
 
-        MouseArea {
-          anchors.fill: parent
-          hoverEnabled: true
-          acceptedButtons: Qt.NoButton
-          onContainsMouseChanged: {
-            root.peekCardHovered = containsMouse
-            if (containsMouse)
+        HoverHandler {
+          onHoveredChanged: {
+            if (hovered) {
+              root.peekCardHovered = true
               peekHideTimer.stop()
-            else
+            } else {
+              root.peekCardHovered = false
               root.scheduleClosePeek()
+            }
           }
         }
 
-        Row {
-          id: peekRow
-          anchors.centerIn: parent
-          spacing: Style.space(4)
+        Rectangle {
+          id: peekCard
+          anchors.top: parent.top
+          anchors.left: parent.left
+          width: peekRow.implicitWidth + Style.space(12)
+          height: peekRow.implicitHeight + Style.space(12)
+          color: Color.background
+          border.width: 1
+          border.color: Util.alpha(Color.foreground, 0.22)
+          radius: Math.max(6, Style.space(6))
 
-          Repeater {
-            model: root.peekItem ? (root.peekItem.windows || []) : []
-            delegate: WindowPreview {
-              required property var modelData
-              address: modelData.address || ""
-              title: modelData.title || (root.peekItem ? root.peekItem.label : "")
-              icon: root.peekItem ? root.peekItem.icon : ""
-              minimized: !!modelData.minimized
-              isActive: modelData.address === root.activeAddress
-              onActivated: root.activatePeekWindow(modelData)
+          Row {
+            id: peekRow
+            anchors.centerIn: parent
+            spacing: Style.space(4)
+
+            Repeater {
+              model: root.peekItem ? (root.peekItem.windows || []) : []
+              delegate: WindowPreview {
+                required property var modelData
+                address: modelData.address || ""
+                title: modelData.title || (root.peekItem ? root.peekItem.label : "")
+                icon: root.peekItem ? root.peekItem.icon : ""
+                minimized: !!modelData.minimized
+                isActive: modelData.address === root.activeAddress
+                onActivated: root.activatePeekWindow(modelData)
+                onHoveredChanged: {
+                  if (hovered) {
+                    root.peekCardHovered = true
+                    peekHideTimer.stop()
+                  }
+                }
+              }
             }
           }
         }

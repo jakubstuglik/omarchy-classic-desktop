@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2 — 2026-09-06
+
+- Keep hover miniatures open when moving the cursor from the icon onto a thumbnail, so you can click one to restore that window
+
 ## 0.3.1 — 2026-09-06
 
 - Fix hover miniatures: do not stash compositor objects on the taskbar model (that broke plugin reload and threw a runtime error when a second window opened)

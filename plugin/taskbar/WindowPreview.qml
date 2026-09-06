@@ -80,6 +80,10 @@ Item {
       visible: hasContent && !previewArea.captureFailed
       live: true
       paintCursor: false
+      // Live capture is visual-only. If this item takes pointer events,
+      // moving onto a miniature steals hover from the peek card and the
+      // popup closes before a click can land.
+      enabled: false
       captureSource: (root.captureToplevel && root.captureToplevel.wayland)
         ? root.captureToplevel.wayland
         : null
@@ -143,6 +147,7 @@ Item {
   MouseArea {
     id: mouse
     anchors.fill: parent
+    z: 10
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
     onClicked: root.activated()
