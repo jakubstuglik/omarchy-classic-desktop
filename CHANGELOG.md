@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0 — 2026-09-06
+
+- Hover a taskbar icon that has more than one window to show live miniatures; click a miniature to raise that window
+
 ## 0.2.1 — 2026-09-06
 
 - Stop the work-area clamp from fighting titlebar drag (windows stay where you put them)

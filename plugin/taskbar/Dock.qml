@@ -66,6 +66,9 @@ Item {
   property string lastRealDesktopId: ""
   property var contextItem: null
   property real contextX: 0
+  property var peekItem: null
+  property real peekX: 0
+  property bool peekCardHovered: false
 
   readonly property int barHeight: Style.space(48)
   readonly property int itemWidth: Style.space(68)
@@ -119,6 +122,23 @@ Item {
   function ocdNormalizeAddress(addr) {
     var s = String(addr || "")
     return s.indexOf("0x") === 0 ? s : "0x" + s
+  }
+
+  function toplevelForAddress(addr) {
+    var want = ocdNormalizeAddress(addr)
+    var raw = (Hyprland.toplevels && Hyprland.toplevels.values) ? Hyprland.toplevels.values : []
+    for (var i = 0; i < raw.length; i++) {
+      if (ocdNormalizeAddress(raw[i].address) === want)
+        return raw[i]
+    }
+    return null
+  }
+
+  function withToplevel(client) {
+    var copy = {}
+    for (var k in client) copy[k] = client[k]
+    copy.toplevel = toplevelForAddress(client.address)
+    return copy
   }
 
   function pinMatches(pin, identity) {
@@ -184,7 +204,7 @@ Item {
       for (var j = 0; j < raw.length; j++) {
         var c = raw[j]
         if (pinMatches(p, c.identity)) {
-          windows.push(c)
+          windows.push(withToplevel(c))
           used[c.address] = true
         }
       }
@@ -194,13 +214,13 @@ Item {
     for (var k = 0; k < raw.length; k++) {
       var extra = raw[k]
       if (used[extra.address]) continue
-      var grouped = [extra]
+      var grouped = [withToplevel(extra)]
       used[extra.address] = true
       for (var n = k + 1; n < raw.length; n++) {
         var sib = raw[n]
         if (used[sib.address]) continue
         if (String(sib.identity || "") === String(extra.identity || "") && extra.identity) {
-          grouped.push(sib)
+          grouped.push(withToplevel(sib))
           used[sib.address] = true
         }
       }
@@ -373,6 +393,7 @@ Item {
   function activateItem(item) {
     item = root.liveTab(item)
     if (!item) return
+    root.closePeek()
     var windows = root.windowsForItem(item)
     console.log("[ocd-dock] activate " + item.desktopId
       + " windows=" + windows.length
@@ -420,6 +441,7 @@ Item {
   function openContextMenu(item, x) {
     item = root.liveTab(item)
     if (!item) return
+    root.closePeek()
     console.log("[ocd-dock] context menu for " + item.desktopId)
     root.contextItem = item
     root.contextX = x
@@ -427,6 +449,48 @@ Item {
 
   function closeContextMenu() {
     root.contextItem = null
+  }
+
+  function openPeek(item, x) {
+    if (root.contextItem) return
+    item = root.liveTab(item)
+    if (!item || !item.windows || item.windows.length < 2) {
+      root.closePeek()
+      return
+    }
+    peekHideTimer.stop()
+    root.peekItem = item
+    root.peekX = x
+  }
+
+  function closePeek() {
+    peekHideTimer.stop()
+    root.peekItem = null
+    root.peekCardHovered = false
+  }
+
+  function scheduleClosePeek() {
+    peekHideTimer.restart()
+  }
+
+  Timer {
+    id: peekHideTimer
+    interval: 280
+    repeat: false
+    onTriggered: {
+      if (!root.peekCardHovered)
+        root.closePeek()
+    }
+  }
+
+  function activatePeekWindow(win) {
+    if (!win) return
+    if (win.minimized)
+      root.restoreMinimized(win.address)
+    else
+      root.focusWindow(win.address)
+    root.rememberItem(root.peekItem, win.address, win.identity)
+    root.closePeek()
   }
 
   function contextMenuModel(item) {
@@ -674,8 +738,11 @@ Item {
             running: modelData.running
             isMinimized: modelData.isMinimized
             isActive: modelData.isActive
+            windowCount: (modelData.windows && modelData.windows.length) ? modelData.windows.length : 0
             onActivated: root.activateItem(modelData)
             onContextMenuRequested: root.openContextMenu(modelData, tabsRow.x + x + width / 2 - Style.space(94))
+            onHoverPeekRequested: root.openPeek(modelData, tabsRow.x + x + width / 2)
+            onHoverPeekEnded: root.scheduleClosePeek()
           }
         }
       }
@@ -775,6 +842,73 @@ Item {
                 cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                 onClicked: root.runContextAction(modelData.id)
               }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Variants {
+    model: Quickshell.screens
+
+    PanelWindow {
+      id: peekLayer
+      required property var modelData
+      screen: modelData
+      visible: root.peekItem !== null && root.peekItem.windows && root.peekItem.windows.length > 1
+      color: "transparent"
+      exclusionMode: ExclusionMode.Ignore
+      WlrLayershell.namespace: "ocd-classic-taskbar-peek"
+      WlrLayershell.layer: WlrLayer.Overlay
+      WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+      anchors { top: true; bottom: true; left: true; right: true }
+
+      MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: root.closePeek()
+      }
+
+      Rectangle {
+        id: peekCard
+        width: peekRow.implicitWidth + Style.space(12)
+        height: peekRow.implicitHeight + Style.space(12)
+        x: Math.max(8, Math.min(root.peekX - width / 2, parent.width - width - 8))
+        y: parent.height - root.barHeight - height - 8
+        color: Color.background
+        border.width: 1
+        border.color: Util.alpha(Color.foreground, 0.22)
+        radius: Math.max(6, Style.space(6))
+
+        MouseArea {
+          anchors.fill: parent
+          hoverEnabled: true
+          acceptedButtons: Qt.NoButton
+          onContainsMouseChanged: {
+            root.peekCardHovered = containsMouse
+            if (containsMouse)
+              peekHideTimer.stop()
+            else
+              root.scheduleClosePeek()
+          }
+        }
+
+        Row {
+          id: peekRow
+          anchors.centerIn: parent
+          spacing: Style.space(4)
+
+          Repeater {
+            model: root.peekItem ? (root.peekItem.windows || []) : []
+            delegate: WindowPreview {
+              required property var modelData
+              toplevel: modelData.toplevel
+              title: modelData.title || root.peekItem.label
+              icon: root.peekItem.icon
+              minimized: !!modelData.minimized
+              isActive: modelData.address === root.activeAddress
+              onActivated: root.activatePeekWindow(modelData)
             }
           }
         }

@@ -24,6 +24,7 @@ Item {
   property bool running: false
   property bool isMinimized: false
   property bool isActive: false
+  property int windowCount: 0
 
   readonly property bool hovered: mouseArea.containsMouse
   readonly property int iconSize: Style.space(24)
@@ -31,6 +32,8 @@ Item {
 
   signal activated()
   signal contextMenuRequested()
+  signal hoverPeekRequested()
+  signal hoverPeekEnded()
 
   Rectangle {
     anchors.horizontalCenter: parent.horizontalCenter
@@ -91,17 +94,31 @@ Item {
     Behavior on width { NumberAnimation { duration: 120 } }
   }
 
+  Timer {
+    id: peekTimer
+    interval: 400
+    repeat: false
+    onTriggered: root.hoverPeekRequested()
+  }
+
   MouseArea {
     id: mouseArea
     anchors.fill: parent
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+    onContainsMouseChanged: {
+      if (containsMouse && root.windowCount > 1) {
+        peekTimer.restart()
+      } else {
+        peekTimer.stop()
+        root.hoverPeekEnded()
+      }
+    }
     onClicked: function (mouse) {
-      console.log("[ocd-dock] item click button=" + mouse.button
-        + " left=" + Qt.LeftButton + " right=" + Qt.RightButton
-        + " label=" + root.label)
       if (mouse.button === Qt.RightButton) {
+        peekTimer.stop()
+        root.hoverPeekEnded()
         root.contextMenuRequested()
         return
       }

@@ -16,7 +16,7 @@ Cursor Origin is an optional mirror only. Origin cannot host public repos yet.
 ## Layout
 
 ```
-plugin/taskbar/     Quickshell service id: io.github.jstuglik.taskbar
+plugin/taskbar/     Quickshell service id: io.github.jstuglik.taskbar (hover miniatures when an icon has 2+ windows)
 bin/ocd-window      maximize / raise / minimize / fit helpers
 hypr/classic.lua    float, stack, one-shot open fit, titlebar double-click maximize
 install.sh          apply overlay; snapshot OCD files first
