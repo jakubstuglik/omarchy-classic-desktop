@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0 — 2026-09-06
+
+- Reopening an app restores its last size and position (including maximize)
+
 ## 0.6.0 — 2026-09-06
 
 - While dragging a pin, the other icons slide to leave a gap where it would drop

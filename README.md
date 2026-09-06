@@ -35,6 +35,7 @@ The installer:
 - Chromium uses the system title bar (restart the browser after install)
 - Hover a running taskbar icon to see live miniatures (one window or several); click a miniature to raise it, middle-click or the X to close it
 - Drag pinned taskbar icons to reorder them; the others slide aside and leave a gap under the cursor
+- Closing an app remembers its size and position for the next open
 
 Pins stay in `~/.config/omarchy/ocd/dock-pins.json` on each machine. They are not part of this repo.
 

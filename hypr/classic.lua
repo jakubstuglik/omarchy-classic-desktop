@@ -1,8 +1,12 @@
--- omarchy-classic-desktop 0.2.1
--- Floating, stacking, one-shot open fit. Loaded from hyprland.lua via a
--- marked `require("classic")` block. Does not replace OCD's ocd.lua.
+-- omarchy-classic-desktop 0.7.0
+-- Floating, stacking, one-shot open fit, last size/position. Loaded from
+-- hyprland.lua via a marked `require("classic")` block. Does not replace
+-- OCD's ocd.lua.
 
 local helper = os.getenv("HOME") .. "/.local/bin/ocd-window"
+local geom_dir = os.getenv("HOME") .. "/.local/state/ocd-classic"
+local geom_path = geom_dir .. "/last-geom.json"
+local last_geom = {}
 
 -- Classic desktop: every window floats. Tiling is not used.
 o.window(".*", {
@@ -93,10 +97,111 @@ local function skip_fit(w)
   return false
 end
 
--- One-shot fit when a window first maps. Do not run on a timer or on
--- title changes: Chromium retitles constantly, and a 250ms clamp of a
--- near-full-height window always forces y back to the work-area top,
--- which makes titlebar-drag feel like the window is glued there.
+local function class_key(w)
+  local c = string.lower(tostring((w and (w.class or w.initialClass)) or ""))
+  return c
+end
+
+local function json_escape(s)
+  return (string.gsub(s, '[\\"]', { ["\\"] = "\\\\", ['"'] = '\\"' }))
+end
+
+local function load_last_geom()
+  local f = io.open(geom_path, "r")
+  if f == nil then
+    return
+  end
+  local body = f:read("*a") or ""
+  f:close()
+  for key, x, y, w, h, maxv in body:gmatch(
+    '"([^"]+)":{"x":(-?%d+),"y":(-?%d+),"w":(%d+),"h":(%d+),"max":(%a+)}'
+  ) do
+    last_geom[key] = {
+      x = tonumber(x),
+      y = tonumber(y),
+      w = tonumber(w),
+      h = tonumber(h),
+      max = (maxv == "true"),
+    }
+  end
+end
+
+local function persist_last_geom()
+  os.execute("mkdir -p " .. geom_dir)
+  local f = io.open(geom_path, "w")
+  if f == nil then
+    return
+  end
+  local parts = { "{" }
+  local first = true
+  for key, g in pairs(last_geom) do
+    if g ~= nil and g.x ~= nil then
+      if not first then
+        parts[#parts + 1] = ","
+      end
+      first = false
+      parts[#parts + 1] = string.format(
+        '"%s":{"x":%d,"y":%d,"w":%d,"h":%d,"max":%s}',
+        json_escape(key),
+        g.x, g.y, g.w, g.h,
+        g.max and "true" or "false"
+      )
+    end
+  end
+  parts[#parts + 1] = "}"
+  f:write(table.concat(parts))
+  f:close()
+end
+
+local function is_workarea_sized(x, y, w, h, wx, wy, ww, wh)
+  local function absdiff(a, b)
+    if a > b then
+      return a - b
+    end
+    return b - a
+  end
+  return absdiff(x, wx) <= 24 and absdiff(y, wy) <= 24
+    and absdiff(w, ww) <= 48 and absdiff(h, wh) <= 48
+end
+
+local function others_of_class(w, key)
+  local n = 0
+  for _, other in ipairs(hl.get_windows() or {}) do
+    if other ~= nil and other.mapped and other.address ~= w.address
+        and class_key(other) == key then
+      n = n + 1
+    end
+  end
+  return n
+end
+
+local function apply_chrome_props(w, ww, wh)
+  local cls = class_key(w)
+  if cls:find("chromium", 1, true) or cls:find("chrome", 1, true)
+      or cls:find("brave", 1, true) or cls == "spotify" or cls == "code"
+      or cls:find("discord", 1, true) then
+    hl.dispatch(hl.dsp.window.set_prop({
+      window = w,
+      prop = "no_xdg_drags",
+      value = "1",
+    }))
+  end
+  hl.dispatch(hl.dsp.window.set_prop({
+    window = w,
+    prop = "max_size",
+    value = string.format("%d %d", ww, wh),
+  }))
+end
+
+local function place_window(w, nx, ny, nw, nh)
+  force_float(w)
+  hl.dispatch(hl.dsp.window.resize({ x = nw, y = nh, window = w }))
+  hl.dispatch(hl.dsp.window.move({ x = nx, y = ny, relative = false, window = w }))
+end
+
+-- One-shot fit when a window first maps. Prefer the last closed size and
+-- position for this app (Windows-style). Extra windows of the same class
+-- still get the default fit so they are not stacked on the first.
 local function fit_new_window(w)
   if skip_fit(w) then
     return
@@ -105,6 +210,29 @@ local function fit_new_window(w)
   if wx == nil then
     return
   end
+  apply_chrome_props(w, ww, wh)
+
+  local key = class_key(w)
+  local saved = (key ~= "") and last_geom[key] or nil
+  if saved and others_of_class(w, key) == 0 then
+    local nx, ny, nw, nh
+    if saved.max then
+      nx, ny, nw, nh = wx, wy, ww, wh
+    else
+      nw, nh = saved.w, saved.h
+      if nw > ww then nw = ww end
+      if nh > wh then nh = wh end
+      if nw < 200 then nw = 200 end
+      if nh < 120 then nh = 120 end
+      nx, ny = saved.x, saved.y
+      if ny < wy then ny = wy end
+      if nx + nw > wx + ww then nx = wx + ww - nw end
+      if nx < wx then nx = wx end
+    end
+    place_window(w, nx, ny, nw, nh)
+    return
+  end
+
   local cx, cy = vec(w.at)
   local cw, ch = vec(w.size)
   local nw, nh, nx, ny = cw, ch, cx, cy
@@ -127,32 +255,50 @@ local function fit_new_window(w)
     nx = wx
   end
   force_float(w)
-  local cls = string.lower(tostring(w.class or ""))
-  if cls:find("chromium", 1, true) or cls:find("chrome", 1, true)
-      or cls:find("brave", 1, true) or cls == "spotify" or cls == "code"
-      or cls:find("discord", 1, true) then
-    hl.dispatch(hl.dsp.window.set_prop({
-      window = w,
-      prop = "no_xdg_drags",
-      value = "1",
-    }))
-  end
-  hl.dispatch(hl.dsp.window.set_prop({
-    window = w,
-    prop = "max_size",
-    value = string.format("%d %d", ww, wh),
-  }))
   if nx ~= cx or ny ~= cy or nw ~= cw or nh ~= ch then
-    hl.dispatch(hl.dsp.window.resize({ x = nw, y = nh, window = w }))
-    hl.dispatch(hl.dsp.window.move({ x = nx, y = ny, relative = false, window = w }))
+    place_window(w, nx, ny, nw, nh)
   end
 end
+
+local function remember_window(w)
+  if skip_fit(w) then
+    return
+  end
+  local key = class_key(w)
+  if key == "" then
+    return
+  end
+  local cx, cy = vec(w.at)
+  local cw, ch = vec(w.size)
+  if cw < 120 or ch < 80 then
+    return
+  end
+  local max = false
+  local wx, wy, ww, wh = workarea(w.monitor)
+  if wx ~= nil then
+    max = is_workarea_sized(cx, cy, cw, ch, wx, wy, ww, wh)
+  end
+  last_geom[key] = { x = cx, y = cy, w = cw, h = ch, max = max }
+  persist_last_geom()
+end
+
+load_last_geom()
 
 hl.on("window.open", function(w)
   force_float(w)
   fit_new_window(w)
+  -- GTK/Chromium often apply their own size just after map; re-apply once.
+  local key = class_key(w)
+  if key ~= "" and last_geom[key] ~= nil and others_of_class(w, key) == 0 then
+    hl.timer(function()
+      if w ~= nil and w.mapped then
+        fit_new_window(w)
+      end
+    end, { timeout = 80, type = "oneshot" })
+  end
 end)
 hl.on("window.open_early", force_float)
+hl.on("window.close", remember_window)
 
 -- Snap floating windows to each other and to screen edges.
 hl.config({

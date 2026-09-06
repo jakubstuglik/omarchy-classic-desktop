@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.jstuglik.taskbar",
   "name": "Classic Taskbar",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "author": "Jakub Stuglik",
   "license": "GPL-3.0",
   "description": "Windows-style icon taskbar for Omarchy: pins, app grouping, and a right-click menu. Requires OCD v1.2+.",
