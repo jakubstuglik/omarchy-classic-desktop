@@ -1,8 +1,12 @@
 # Changelog
 
+## 0.7.2 — 2026-09-06
+
+- Drop the invalid `no_xdg_drags` window rule that showed a config error bar at login
+
 ## 0.7.1 — 2026-09-06
 
-- Stop Hyprland "property" error toasts on window open (invalid set_prop values)
+- Stop Hyprland error toasts on window open (invalid set_prop / window-rule fields)
 
 ## 0.7.0 — 2026-09-06
 

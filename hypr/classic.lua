@@ -1,4 +1,4 @@
--- omarchy-classic-desktop 0.7.1
+-- omarchy-classic-desktop 0.7.2
 -- Floating, stacking, one-shot open fit, last size/position. Loaded from
 -- hyprland.lua via a marked `require("classic")` block. Does not replace
 -- OCD's ocd.lua.
@@ -23,13 +23,6 @@ end
 o.window(".*", {
   float = true,
   center = true,
-})
-
--- Disable CSD-driven drags (Chromium/Electron). Set as a window rule, not
--- set_prop on every map — a string max_size/no_xdg_drags value pops
--- Hyprland "property" error toasts.
-o.window("(chromium|google-chrome|brave-browser|brave|spotify|code|discord|vesktop)", {
-  no_xdg_drags = true,
 })
 
 -- GTK apps should not draw a second titlebar; hyprbars is the frame.
