@@ -70,6 +70,8 @@ Item {
   property real peekX: 0
   property bool peekCardHovered: false
   property bool peekIconHovered: false
+  property int pinDragFrom: -1
+  property int pinDropGap: -1
 
   readonly property int barHeight: Style.space(48)
   readonly property int itemWidth: Style.space(68)
@@ -211,6 +213,7 @@ Item {
       var resolvedExtra = AppMatcher.resolve(extra.identity, extra.title, typeof DesktopEntries !== "undefined" ? DesktopEntries : null)
       list.push(makeButton(null, grouped, resolvedExtra.desktopId || extra.identity, extra.title))
     }
+    if (root.pinDragFrom >= 0) return
     root.tabs = list
     root.syncPeek()
   }
@@ -247,6 +250,7 @@ Item {
     command: ["jq", "-c", ".", root.pinsPath]
     stdout: StdioCollector {
       onStreamFinished: {
+        if (root.pinDragFrom >= 0) return
         var t = String(text || "").trim()
         try { root.pins = t.length > 0 ? JSON.parse(t) : [] }
         catch (e) { root.pins = [] }
@@ -294,6 +298,67 @@ Item {
   function isPinned(desktopId) {
     for (var i = 0; i < pins.length; i++) if (pins[i].desktopId === desktopId) return true
     return false
+  }
+
+  function pinIndexOf(desktopId) {
+    var id = String(desktopId || "")
+    for (var i = 0; i < root.pins.length; i++) {
+      if (String(root.pins[i].desktopId) === id) return i
+    }
+    return -1
+  }
+
+  function pinGapAt(xInRow) {
+    var n = root.pins.length
+    if (n <= 0) return 0
+    var slot = root.itemWidth + Style.space(2)
+    if (xInRow <= 0) return 0
+    var i = Math.floor(xInRow / slot)
+    if (i < 0) i = 0
+    if (i >= n) return n
+    var local = xInRow - i * slot
+    return (local < root.itemWidth / 2) ? i : i + 1
+  }
+
+  function beginPinDrag(item) {
+    if (!item) return
+    root.closePeek()
+    root.closeContextMenu()
+    root.pinDragFrom = root.pinIndexOf(item.desktopId)
+    root.pinDropGap = root.pinDragFrom
+  }
+
+  function updatePinDrag(xInRow) {
+    if (root.pinDragFrom < 0) return
+    root.pinDropGap = root.pinGapAt(xInRow)
+  }
+
+  function finishPinDrag() {
+    var from = root.pinDragFrom
+    var gap = root.pinDropGap
+    root.pinDragFrom = -1
+    root.pinDropGap = -1
+    root.movePinToGap(from, gap)
+  }
+
+  function cancelPinDrag() {
+    root.pinDragFrom = -1
+    root.pinDropGap = -1
+  }
+
+  function movePinToGap(from, gap) {
+    if (from < 0 || gap < 0 || from >= root.pins.length) return
+    if (gap === from || gap === from + 1) return
+    var next = root.pins.slice()
+    var pin = next.splice(from, 1)[0]
+    var insert = gap
+    if (insert > from) insert -= 1
+    if (insert < 0) insert = 0
+    if (insert > next.length) insert = next.length
+    next.splice(insert, 0, pin)
+    root.pins = next
+    root.persistPins()
+    root.recomputeTabs()
   }
 
   Process { id: launchProc }
@@ -453,6 +518,7 @@ Item {
 
   function openPeek(item, x) {
     if (root.contextItem) return
+    if (root.pinDragFrom >= 0) return
     item = root.liveTab(item)
     if (!item || !item.windows || item.windows.length < 1) {
       root.closePeek()
@@ -665,6 +731,9 @@ Item {
       return "missing:" + desktopId
     }
     function dump(): string {
+      var pinIds = []
+      var list = root.pins || []
+      for (var i = 0; i < list.length; i++) pinIds.push(list[i].desktopId)
       return JSON.stringify({
         lastRealDesktopId: root.lastRealDesktopId,
         lastRealAddress: root.lastRealAddress,
@@ -673,6 +742,9 @@ Item {
         peek: root.peekItem ? root.peekItem.desktopId : "",
         peekCardHovered: root.peekCardHovered,
         peekIconHovered: root.peekIconHovered,
+        pinDragFrom: root.pinDragFrom,
+        pinDropGap: root.pinDropGap,
+        pins: pinIds,
         tabs: root.tabs
       })
     }
@@ -718,7 +790,8 @@ Item {
     repeat: true
     onTriggered: {
       root.refreshWindows()
-      root.refreshPins()
+      if (root.pinDragFrom < 0)
+        root.refreshPins()
     }
   }
 
@@ -778,6 +851,10 @@ Item {
               root.closePeek()
               root.closeItem(modelData)
             }
+            onPinDragStarted: root.beginPinDrag(modelData)
+            onPinDragMoved: function (xInParent) { root.updatePinDrag(xInParent) }
+            onPinDragFinished: root.finishPinDrag()
+            onPinDragCancelled: root.cancelPinDrag()
             onContextMenuRequested: root.openContextMenu(modelData, tabsRow.x + x + width / 2 - Style.space(94))
             onHoverEntered: {
               if (root.peekItem && root.peekItem.desktopId === modelData.desktopId) {
@@ -793,6 +870,19 @@ Item {
             }
           }
         }
+      }
+
+      Rectangle {
+        visible: root.pinDragFrom >= 0 && root.pinDropGap >= 0
+                 && root.pinDropGap !== root.pinDragFrom
+                 && root.pinDropGap !== root.pinDragFrom + 1
+        x: tabsRow.x + root.pinDropGap * (root.itemWidth + tabsRow.spacing) - 1
+        y: tabsRow.y + Style.space(6)
+        width: 2
+        height: tabsRow.height - Style.space(12)
+        radius: 1
+        color: Color.accent
+        z: 20
       }
     }
   }

@@ -34,6 +34,7 @@ The installer:
 - double-click the titlebar to maximize or restore (same helper)
 - Chromium uses the system title bar (restart the browser after install)
 - Hover a running taskbar icon to see live miniatures (one window or several); click a miniature to raise it, middle-click or the X to close it
+- Drag pinned taskbar icons to reorder them
 
 Pins stay in `~/.config/omarchy/ocd/dock-pins.json` on each machine. They are not part of this repo.
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0 — 2026-09-06
+
+- Drag a pinned taskbar icon to reorder it; the order is saved
+
 ## 0.4.0 — 2026-09-06
 
 - Hover a running taskbar icon to see a miniature even when there is only one window

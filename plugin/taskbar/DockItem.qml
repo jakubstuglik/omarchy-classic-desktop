@@ -25,7 +25,9 @@ Item {
   property bool isMinimized: false
   property bool isActive: false
   property int windowCount: 0
+  property bool dragging: false
 
+  opacity: dragging ? 0.4 : 1
   readonly property bool hovered: mouseArea.containsMouse
   readonly property int iconSize: Style.space(24)
   readonly property int radius: Math.max(6, Style.space(6))
@@ -36,6 +38,10 @@ Item {
   signal hoverEntered()
   signal hoverPeekRequested()
   signal hoverPeekEnded()
+  signal pinDragStarted()
+  signal pinDragMoved(real xInParent)
+  signal pinDragFinished()
+  signal pinDragCancelled()
 
   Rectangle {
     anchors.horizontalCenter: parent.horizontalCenter
@@ -107,9 +113,17 @@ Item {
     id: mouseArea
     anchors.fill: parent
     hoverEnabled: true
-    cursorShape: Qt.PointingHandCursor
+    preventStealing: true
+    cursorShape: root.dragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+
+    property bool suppressClick: false
+    property real pressX: 0
+    property real pressY: 0
+    readonly property real dragThreshold: Style.space(8)
+
     onContainsMouseChanged: {
+      if (root.dragging) return
       if (containsMouse) {
         // Immediate keep-alive so moving back from a miniature to this
         // icon does not lose the race against the close timer.
@@ -121,7 +135,48 @@ Item {
         root.hoverPeekEnded()
       }
     }
+
+    onPressed: function (mouse) {
+      suppressClick = false
+      pressX = mouse.x
+      pressY = mouse.y
+    }
+
+    onPositionChanged: function (mouse) {
+      if (!root.pinned) return
+      if (!(mouse.buttons & Qt.LeftButton)) return
+      var dist = Math.abs(mouse.x - pressX) + Math.abs(mouse.y - pressY)
+      if (!root.dragging && dist >= dragThreshold) {
+        root.dragging = true
+        peekTimer.stop()
+        root.hoverPeekEnded()
+        root.pinDragStarted()
+      }
+      if (root.dragging)
+        root.pinDragMoved(root.mapToItem(parent, mouse.x, mouse.y).x)
+    }
+
+    onReleased: function (mouse) {
+      if (root.dragging) {
+        suppressClick = true
+        root.dragging = false
+        root.pinDragFinished()
+      }
+    }
+
+    onCanceled: {
+      if (root.dragging) {
+        root.dragging = false
+        suppressClick = false
+        root.pinDragCancelled()
+      }
+    }
+
     onClicked: function (mouse) {
+      if (suppressClick) {
+        suppressClick = false
+        return
+      }
       if (mouse.button === Qt.RightButton) {
         peekTimer.stop()
         root.hoverPeekEnded()
