@@ -1,6 +1,6 @@
 # omarchy-classic-desktop
 
-Windows-style desktop for [Omarchy](https://omarchy.org) 4.x, layered on [OCD](https://github.com/fevangelou/ocd). Current release: **v0.9.2**.
+Windows-style desktop for [Omarchy](https://omarchy.org) 4.x, layered on [OCD](https://github.com/fevangelou/ocd). Current release: **v0.10.0**.
 
 **Compatible with OCD v1.2.** That is the version this overlay is tested against. Later OCD releases are not promised.
 
@@ -22,7 +22,7 @@ https://github.com/user-attachments/assets/66354337-d406-4a4a-8506-59d9683a952c
 
 ## What you get
 
-- Bottom icon taskbar: pins, app grouping, right-click pin/close, hover miniatures, middle-click close, drag-to-reorder pins
+- Bottom icon taskbar: pins, app grouping, right-click pin/close, hover miniatures, middle-click close, drag-to-reorder pins (right-click empty taskbar to lock or unlock dragging)
 - Floating windows with OCD titlebars; double-click the titlebar to maximize into the work area
 - Reopening an app restores its last size and position (including maximize)
 - Right-click empty desktop: New folder, Change wallpaper, Browse wallpaper…, Next wallpaper, Change theme, Display settings, Open in Files, Open Terminal here
@@ -59,7 +59,7 @@ The installer:
 - double-click the titlebar to maximize or restore (same helper)
 - Chromium uses the system title bar (restart the browser after install)
 - Hover a running taskbar icon to see live miniatures (one window or several); click a miniature to raise it, middle-click or the X to close it
-- Drag pinned taskbar icons to reorder them; the others slide aside and leave a gap under the cursor
+- Drag pinned taskbar icons to reorder them (unlock first: right-click empty taskbar); the others slide aside and leave a gap under the cursor
 - Closing an app remembers its size and position for the next open
 - Right-click empty desktop: new folder, wallpaper (theme set or any image file), theme, display settings, Files, Terminal
 

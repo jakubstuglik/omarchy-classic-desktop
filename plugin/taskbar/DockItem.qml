@@ -26,6 +26,8 @@ Item {
   property bool isActive: false
   property int windowCount: 0
   property bool dragging: false
+  property bool dragEnabled: false
+  property bool unlockedFrame: false
 
   opacity: dragging ? 0 : 1
   readonly property bool hovered: mouseArea.containsMouse
@@ -90,6 +92,14 @@ Item {
     }
   }
 
+  UnlockFrame {
+    visible: root.unlockedFrame && !root.dragging
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.verticalCenter: parent.verticalCenter
+    width: parent.width - Style.space(6)
+    height: parent.height - Style.space(8)
+  }
+
   Rectangle {
     visible: root.running
     anchors.bottom: parent.bottom
@@ -143,7 +153,7 @@ Item {
     }
 
     onPositionChanged: function (mouse) {
-      if (!root.pinned) return
+      if (!root.pinned || !root.dragEnabled) return
       if (!(mouse.buttons & Qt.LeftButton)) return
       var dist = Math.abs(mouse.x - pressX) + Math.abs(mouse.y - pressY)
       if (!root.dragging && dist >= dragThreshold) {

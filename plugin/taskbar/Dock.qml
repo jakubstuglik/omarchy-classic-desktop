@@ -43,6 +43,7 @@ Item {
   // entries, and the dock is a service kind here, with no confirmed
   // equivalent — see AGENTS.md.
   readonly property string pinsPath: configDir + "/dock-pins.json"
+  readonly property string taskbarPath: configDir + "/taskbar.json"
   readonly property string ocdBin: home + "/.local/share/ocd/bin/ocd"
   readonly property string pluginDir: home + "/.config/omarchy/plugins/io.github.jstuglik.taskbar"
 
@@ -65,7 +66,11 @@ Item {
   property string lastRealIdentity: ""
   property string lastRealDesktopId: ""
   property var contextItem: null
+  property bool barMenuOpen: false
   property real contextX: 0
+  // When true, pinned icons cannot be drag-reordered. Right-click empty
+  // taskbar (not an icon) to lock or unlock. Default locked.
+  property bool pinsLocked: true
   property var peekItem: null
   property real peekX: 0
   property bool peekCardHovered: false
@@ -85,6 +90,7 @@ Item {
   function refreshFeatureFlag() { featureReadProc.running = true }
   function refreshOverrides() { overridesReadProc.running = true }
   function refreshPins() { pinsReadProc.running = true }
+  function refreshTaskbar() { taskbarReadProc.running = true }
   function refreshWindows() {
     Hyprland.refreshToplevels()
     Hyprland.refreshWorkspaces()
@@ -332,6 +338,36 @@ Item {
     }
   }
 
+  Process {
+    id: taskbarReadProc
+    command: ["bash", "-c", "cat " + AppMatcher.shQuote(root.taskbarPath) + " 2>/dev/null || echo {}"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          var parsed = JSON.parse(String(text || "").trim() || "{}")
+          if (typeof parsed.pinsLocked === "boolean")
+            root.pinsLocked = parsed.pinsLocked
+        } catch (e) { /* keep default */ }
+      }
+    }
+  }
+
+  Process { id: writeTaskbarProc }
+  function persistTaskbar() {
+    var json = JSON.stringify({ pinsLocked: root.pinsLocked })
+    var script = "mkdir -p " + AppMatcher.shQuote(root.configDir) +
+      " && printf '%s' " + AppMatcher.shQuote(json) + " > " + AppMatcher.shQuote(root.taskbarPath)
+    writeTaskbarProc.command = ["bash", "-c", script]
+    writeTaskbarProc.running = true
+  }
+
+  function setPinsLocked(locked) {
+    root.pinsLocked = !!locked
+    if (root.pinsLocked)
+      root.cancelPinDrag()
+    root.persistTaskbar()
+  }
+
   Process { id: writePinsProc }
   function persistPins() {
     var json = JSON.stringify(root.pins)
@@ -382,6 +418,7 @@ Item {
   }
 
   function beginPinDrag(item) {
+    if (root.pinsLocked) return
     if (!item) return
     root.closePeek()
     root.closeContextMenu()
@@ -574,12 +611,21 @@ Item {
     if (!item) return
     root.closePeek()
     console.log("[ocd-dock] context menu for " + item.desktopId)
+    root.barMenuOpen = false
     root.contextItem = item
+    root.contextX = x
+  }
+
+  function openBarMenu(x) {
+    root.closePeek()
+    root.contextItem = null
+    root.barMenuOpen = true
     root.contextX = x
   }
 
   function closeContextMenu() {
     root.contextItem = null
+    root.barMenuOpen = false
   }
 
   function peekShouldStayOpen() {
@@ -641,6 +687,12 @@ Item {
     root.windowAction("close", win.address)
   }
 
+  function barMenuModel() {
+    if (root.pinsLocked)
+      return [{ id: "unlock-pins", label: "Unlock icons", danger: false, sep: false }]
+    return [{ id: "lock-pins", label: "Lock icons", danger: false, sep: false }]
+  }
+
   function contextMenuModel(item) {
     var items = []
     if (!item) return items
@@ -670,6 +722,16 @@ Item {
   }
 
   function runContextAction(id) {
+    if (id === "lock-pins") {
+      root.setPinsLocked(true)
+      root.closeContextMenu()
+      return
+    }
+    if (id === "unlock-pins") {
+      root.setPinsLocked(false)
+      root.closeContextMenu()
+      return
+    }
     var item = root.contextItem
     root.closeContextMenu()
     if (!item) return
@@ -812,6 +874,7 @@ Item {
         peek: root.peekItem ? root.peekItem.desktopId : "",
         peekCardHovered: root.peekCardHovered,
         peekIconHovered: root.peekIconHovered,
+        pinsLocked: root.pinsLocked,
         pinDragFrom: root.pinDragFrom,
         pinDropGap: root.pinDropGap,
         pinDragX: root.pinDragX,
@@ -838,6 +901,7 @@ Item {
     refreshFeatureFlag()
     refreshOverrides()
     refreshPins()
+    refreshTaskbar()
     refreshWindows()
   }
 
@@ -895,6 +959,15 @@ Item {
         color: Util.alpha(Color.foreground, 0.18)
       }
 
+      MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.RightButton
+        onClicked: function (mouse) {
+          if (mouse.button === Qt.RightButton)
+            root.openBarMenu(mouse.x - Style.space(94))
+        }
+      }
+
       Item {
         id: tabsRow
         anchors.horizontalCenter: parent.horizontalCenter
@@ -925,6 +998,8 @@ Item {
             isMinimized: modelData ? modelData.isMinimized : false
             isActive: modelData ? modelData.isActive : false
             windowCount: modelData && modelData.windows ? modelData.windows.length : 0
+            dragEnabled: !root.pinsLocked && !!(modelData && modelData.kind === "pinned")
+            unlockedFrame: !root.pinsLocked
 
             Behavior on x {
               enabled: root.pinDragFrom >= 0
@@ -1014,7 +1089,7 @@ Item {
       id: menuLayer
       required property var modelData
       screen: modelData
-      visible: root.contextItem !== null
+      visible: root.contextItem !== null || root.barMenuOpen
       color: "transparent"
       exclusionMode: ExclusionMode.Ignore
       WlrLayershell.namespace: "ocd-classic-taskbar-menu"
@@ -1054,7 +1129,7 @@ Item {
           spacing: 0
 
           Repeater {
-            model: root.contextMenuModel(root.contextItem)
+            model: root.barMenuOpen ? root.barMenuModel() : root.contextMenuModel(root.contextItem)
             delegate: Item {
               required property var modelData
               width: menuCol.width
