@@ -28,6 +28,38 @@ https://github.com/user-attachments/assets/66354337-d406-4a4a-8506-59d9683a952c
 - Right-click empty desktop: New folder, Change wallpaper, Browse wallpaper…, Next wallpaper, Change theme, Display settings, Open in Files, Open Terminal here
 - Click-to-focus, tiling keys unbound, Chromium uses the system title bar
 
+## How to use
+
+### Taskbar
+
+| Action | What it does |
+|---|---|
+| Left-click an icon | Launch the app, or raise it. If it is already in front, minimize it. |
+| Right-click an icon | Pin / unpin, minimize, maximize, close (or Close all for a group) |
+| Middle-click an icon | Close that app’s window(s) |
+| Hover a running icon | Live miniature(s). Click one to raise it, middle-click or the X to close it |
+| Drag a **pinned** icon | Reorder pins (only while unlocked) |
+| Right-click **empty** taskbar (not on an icon) | Lock or unlock icon dragging |
+
+Pins start **locked**. Right-click the empty bar (left or right of the icons) and choose **Unlock icons**. Corner ticks appear on the icons while unlocked; drag pins to reorder them. Choose **Lock icons** when you are done. The choice is saved on this machine (`~/.config/omarchy/ocd/taskbar.json`).
+
+![Unlocked icons and Lock icons menu](docs/screenshots/taskbar-unlocked.jpg)
+
+### Windows
+
+- OCD titlebars: minimize (green), maximize (yellow), close (red)
+- Double-click the titlebar to maximize or restore into the work area (below the Omarchy bar, above the taskbar)
+- Closing an app remembers its size and position for the next open
+- Click a window to focus it. Tiling keys are unbound so windows stay floating
+
+### Desktop
+
+Right-click empty wallpaper (not a window): New folder, Change wallpaper, Browse wallpaper…, Next wallpaper, Change theme, Display settings, Open in Files, Open Terminal here.
+
+### Still OCD
+
+Exposé stays on **Super+E**. OCD settings and titlebars stay; this overlay only replaces OCD’s text dock.
+
 ## Prerequisites
 
 1. Omarchy 4.x
@@ -129,7 +161,7 @@ git remote add cursor https://origin.cursor.com/<your-codebase>/omarchy-classic-
 ```
 plugin/taskbar/     Quickshell service (icons, pins, context menu)
 plugin/desktop/     Quickshell service (empty-desktop right-click menu)
-docs/screenshots/   README images
+docs/screenshots/   README images (including unlocked-taskbar menu)
 docs/*.mp4          demo clip (same file as the GitHub release asset)
 bin/ocd-window      maximize/raise/minimize/fit helpers
 hypr/classic.lua    float, stack, clamp

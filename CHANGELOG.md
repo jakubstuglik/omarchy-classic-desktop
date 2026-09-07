@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- README How to use, plus a screenshot of unlocked icons and the empty-taskbar menu
+
 ## 0.10.0 — 2026-09-07
 
 - Right-click empty taskbar (not an icon) to lock or unlock icon dragging

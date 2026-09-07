@@ -15,8 +15,8 @@ import qs.Ui
 Item {
   id: root
 
-  property color lineColor: Util.alpha(Color.foreground, 0.4)
-  readonly property int arm: Math.max(5, Style.space(5))
+  property color lineColor: Util.alpha(Color.foreground, 0.62)
+  readonly property int arm: Math.max(6, Style.space(6))
   readonly property int thick: 1
 
   Rectangle { width: root.arm; height: root.thick; color: root.lineColor }
