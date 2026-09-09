@@ -207,7 +207,7 @@ install_files() {
   if dry; then
     log "[dry-run] install plugin $PLUGIN_ID"
     log "[dry-run] install plugin $DESKTOP_PLUGIN_ID"
-    log "[dry-run] install helpers to $BIN_DIR"
+    log "[dry-run] install helpers to $BIN_DIR (ocd-window, ocd-raise-window, ocd-hyprbars-ensure, ocd-hyprbars-rebuild)"
     log "[dry-run] install $HYPR_CLASSIC"
     return 0
   fi
@@ -220,6 +220,8 @@ install_files() {
   chmod +x "$DESKTOP_PLUGIN_DST/desktop.sh"
   install -m 0755 "$ROOT/bin/ocd-window" "$BIN_DIR/ocd-window"
   install -m 0755 "$ROOT/bin/ocd-raise-window" "$BIN_DIR/ocd-raise-window"
+  install -m 0755 "$ROOT/bin/ocd-hyprbars-ensure" "$BIN_DIR/ocd-hyprbars-ensure"
+  install -m 0755 "$ROOT/bin/ocd-hyprbars-rebuild" "$BIN_DIR/ocd-hyprbars-rebuild"
   install -m 0644 "$ROOT/hypr/classic.lua" "$HYPR_CLASSIC"
   printf 'version=%s\nplugin=%s\ndesktopPlugin=%s\n' "$VERSION" "$PLUGIN_ID" "$DESKTOP_PLUGIN_ID" >"$REF_FILE"
   log "installed plugins, helpers, and classic.lua"
@@ -262,11 +264,16 @@ enable_plugin() {
 
 reload_hypr() {
   if dry; then
-    log "[dry-run] hyprctl reload"
+    log "[dry-run] hyprctl reload && hyprpm reload"
     return 0
   fi
   Hyprland --verify-config >/dev/null 2>&1 || log "warning: Hyprland --verify-config failed"
   hyprctl reload >/dev/null 2>&1 || log "warning: hyprctl reload failed"
+  # hyprctl reload drops hyprpm plugins; re-attach hyprbars so titlebars
+  # survive this install the same way `ocd apply` does.
+  if command -v hyprpm >/dev/null 2>&1; then
+    hyprpm reload >/dev/null 2>&1 || log "warning: hyprpm reload failed (run: ocd-hyprbars-rebuild)"
+  fi
 }
 
 preflight

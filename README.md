@@ -1,6 +1,6 @@
 # omarchy-classic-desktop
 
-Windows-style desktop for [Omarchy](https://omarchy.org) 4.x, layered on [OCD](https://github.com/fevangelou/ocd). Current release: **v0.10.0**.
+Windows-style desktop for [Omarchy](https://omarchy.org) 4.x, layered on [OCD](https://github.com/fevangelou/ocd). Current release: **v0.10.1**.
 
 **Compatible with OCD v1.2.** That is the version this overlay is tested against. Later OCD releases are not promised.
 
@@ -84,7 +84,7 @@ The installer:
 - copies the taskbar plugin as `io.github.jstuglik.taskbar`
 - copies the desktop-menu plugin as `io.github.jstuglik.desktop`
 - disables OCD’s own dock so `ocd update` does not overwrite this taskbar
-- installs `~/.local/bin/ocd-window` and `ocd-raise-window`
+- installs `~/.local/bin/ocd-window`, `ocd-raise-window`, `ocd-hyprbars-ensure`, and `ocd-hyprbars-rebuild`
 - installs `~/.config/hypr/classic.lua` and hooks it from `hyprland.lua`
 - unbinds tiling keys and sets click-to-focus
 - patches OCD’s maximize button to use the work-area helper
@@ -111,7 +111,13 @@ Re-running `./install.sh` keeps that first snapshot. Use `--rebackup` only if yo
 ./uninstall.sh
 ```
 
-That restores OCD’s own dock and titlebar config, puts `hyprland.lua` / `bindings.lua` / `input.lua` back (and strips overlay hunks that were already in those files), removes this overlay’s plugin and `ocd-window` helpers, and re-enables the OCD dock. OCD itself stays installed. Pins are left alone.
+That restores OCD’s own dock and titlebar config, puts `hyprland.lua` / `bindings.lua` / `input.lua` back (and strips overlay hunks that were already in those files), removes this overlay’s plugin and helpers, and re-enables the OCD dock. OCD itself stays installed. Pins are left alone.
+
+If titlebars vanish after an Omarchy or Hyprland update, the compositor ABI changed (often a package rebuild of the same Hyprland tag against a newer Aquamarine). `hyprpm update` is not enough in that case. Rebuild against the installed headers (same on stable and RC):
+
+```sh
+ocd-hyprbars-rebuild
+```
 
 If you never ran `./install.sh` on a machine that was already edited by hand, uninstall still strips the known overlay hunks and tries to fetch stock OCD files from GitHub.
 
@@ -163,8 +169,10 @@ plugin/taskbar/     Quickshell service (icons, pins, context menu)
 plugin/desktop/     Quickshell service (empty-desktop right-click menu)
 docs/screenshots/   README images (including unlocked-taskbar menu)
 docs/*.mp4          demo clip (same file as the GitHub release asset)
-bin/ocd-window      maximize/raise/minimize/fit helpers
-hypr/classic.lua    float, stack, clamp
+bin/ocd-window             maximize/raise/minimize/fit helpers
+bin/ocd-hyprbars-ensure    load hyprbars after login / Hyprland updates
+bin/ocd-hyprbars-rebuild   compile hyprbars against package headers
+hypr/classic.lua           float, stack, clamp
 install.sh          apply on a machine that already has OCD
 ```
 

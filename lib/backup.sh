@@ -58,6 +58,8 @@ take_snapshot() {
   copy_if "$OCD_DOCK_DIR" "$BACKUP_PRE/dock"
   copy_if "$BIN_DIR/ocd-window" "$BACKUP_PRE/bin/ocd-window"
   copy_if "$BIN_DIR/ocd-raise-window" "$BACKUP_PRE/bin/ocd-raise-window"
+  copy_if "$BIN_DIR/ocd-hyprbars-ensure" "$BACKUP_PRE/bin/ocd-hyprbars-ensure"
+  copy_if "$BIN_DIR/ocd-hyprbars-rebuild" "$BACKUP_PRE/bin/ocd-hyprbars-rebuild"
   copy_if "$OCD_FEATURES" "$BACKUP_PRE/features.json"
 
   local dock_feature="true"
@@ -197,7 +199,7 @@ remove_added_files() {
   rm -rf "$PLUGIN_DST" "$DESKTOP_PLUGIN_DST"
   rm -f "$HYPR_CLASSIC"
   # OCD does not ship these helpers. Always remove the overlay copies.
-  rm -f "$BIN_DIR/ocd-window" "$BIN_DIR/ocd-raise-window"
+  rm -f "$BIN_DIR/ocd-window" "$BIN_DIR/ocd-raise-window" "$BIN_DIR/ocd-hyprbars-ensure" "$BIN_DIR/ocd-hyprbars-rebuild"
   log "removed overlay plugins, helpers, and classic.lua"
 }
 

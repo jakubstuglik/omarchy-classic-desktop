@@ -19,6 +19,8 @@ Cursor Origin is an optional mirror only. Origin cannot host public repos yet.
 plugin/taskbar/     Quickshell service id: io.github.jstuglik.taskbar (hover miniatures when an icon has 2+ windows)
 plugin/desktop/     Quickshell service id: io.github.jstuglik.desktop (empty-desktop right-click menu)
 bin/ocd-window      maximize / raise / minimize / fit helpers
+bin/ocd-hyprbars-ensure  load hyprbars after login; rebuild after Hyprland ABI bumps
+bin/ocd-hyprbars-rebuild compile hyprbars against /usr/include/hyprland (pkgrel ABI)
 hypr/classic.lua    float, stack, one-shot open fit, titlebar double-click maximize
 install.sh          apply overlay; snapshot OCD files first
 uninstall.sh        restore OCD from that snapshot
@@ -30,7 +32,7 @@ Live copies after install:
 - `~/.config/omarchy/plugins/io.github.jstuglik.taskbar/`
 - `~/.config/omarchy/plugins/io.github.jstuglik.desktop/`
 - `~/.config/hypr/classic.lua` (hooked from `hyprland.lua` via `>>> ocd-classic >>>`)
-- `~/.local/bin/ocd-window`, `ocd-raise-window`
+- `~/.local/bin/ocd-window`, `ocd-raise-window`, `ocd-hyprbars-ensure`, `ocd-hyprbars-rebuild`
 - snapshot: `~/.local/state/ocd-classic/backup/` (`pre/` + `stock/`)
 
 ## Do not

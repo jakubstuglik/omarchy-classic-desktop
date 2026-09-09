@@ -18,7 +18,7 @@ Restore OCD as it was before this overlay:
   - stock OCD dock + hypr/ocd.lua (from the snapshot, fetched at install)
   - hyprland.lua / bindings.lua / input.lua from the pre-install snapshot,
     with overlay hunks stripped
-  - overlay taskbar + desktop-menu plugins, classic.lua, and ocd-window helpers removed
+  - overlay taskbar + desktop-menu plugins, classic.lua, and overlay helpers removed
   - OCD dock feature re-enabled
 
 Pins in ~/.config/omarchy/ocd/dock-pins.json are left alone.
@@ -57,6 +57,9 @@ if dry; then
 else
   Hyprland --verify-config >/dev/null 2>&1 || log "warning: Hyprland --verify-config failed"
   hyprctl reload >/dev/null 2>&1 || log "warning: hyprctl reload failed"
+  if command -v hyprpm >/dev/null 2>&1; then
+    hyprpm reload >/dev/null 2>&1 || true
+  fi
   rm -f "$REF_FILE"
   if [[ "$KEEP_BACKUP" -eq 0 ]]; then
     rm -rf "$BACKUP_DIR"

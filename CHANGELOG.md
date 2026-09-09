@@ -4,6 +4,10 @@
 
 - README How to use, plus a screenshot of unlocked icons and the empty-taskbar menu
 
+## 0.10.1 — 2026-09-09
+
+- Restore titlebars after a Hyprland package rebuild (stale hyprpm ABI, even when the git tag is unchanged). Rebuilds hyprbars against the installed headers. Same fix on Omarchy stable and RC.
+
 ## 0.10.0 — 2026-09-07
 
 - Right-click empty taskbar (not an icon) to lock or unlock icon dragging

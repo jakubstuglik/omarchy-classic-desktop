@@ -1,4 +1,4 @@
--- omarchy-classic-desktop 0.7.3
+-- omarchy-classic-desktop 0.10.1
 -- Floating, stacking, one-shot open fit, last size/position. Loaded from
 -- hyprland.lua via a marked `require("classic")` block. Does not replace
 -- OCD's ocd.lua.
@@ -279,12 +279,14 @@ end
 
 load_last_geom()
 
--- hyprbars is enabled in hyprpm but is not always injected at compositor
--- start (seen after a crash/relogin: reserved titlebar gap, no bar). Load
--- it, then reload config so ocd.lua can add the buttons (those keys only
--- exist once the plugin is present).
+-- hyprbars is enabled in hyprpm but is not injected until hyprpm reload,
+-- and a Hyprland package rebuild (same tag, new ABI) leaves headers stale
+-- so a bare reload fails. hyprctl reload also unloads hyprpm plugins.
+-- The helper loads or explains how to rebuild, reloads config so ocd.lua
+-- can add the buttons, then re-attaches the plugin.
+local hyprbars_ensure = os.getenv("HOME") .. "/.local/bin/ocd-hyprbars-ensure"
 hl.on("hyprland.start", function()
-  hl.exec_cmd("sh -c 'hyprpm reload >/dev/null 2>&1; hyprctl reload >/dev/null 2>&1'")
+  hl.exec_cmd(hyprbars_ensure)
 end)
 
 hl.on("window.open", function(w)

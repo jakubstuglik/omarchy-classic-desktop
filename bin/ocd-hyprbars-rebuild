@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Rebuild hyprbars against the installed Hyprland package headers.
+#
+# hyprpm update is not enough after an Arch/Omarchy pkgrel rebuild of the
+# same Hyprland git tag: hyprpm keeps its cached headers (old Aquamarine
+# ABI) and the plugin then throws "[hb] Version mismatch" on load.
+# Building with pkg-config uses /usr/include/hyprland from the package.
+set -euo pipefail
+
+CACHE="/var/cache/hyprpm/$(id -un)"
+PLUGIN_SO="$CACHE/hyprland-plugins/hyprbars.so"
+PKG_HEADERS="/usr/include/hyprland"
+PIN_HL="$(awk '/^#define GIT_COMMIT_HASH/{gsub(/"/,""); print $3}' "$PKG_HEADERS/src/version.h" 2>/dev/null || true)"
+
+notify() {
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -a ocd-classic "$1" "$2" || true
+  fi
+}
+
+die() {
+  printf 'ocd-hyprbars-rebuild: %s\n' "$*" >&2
+  notify "Classic desktop titlebars" "$*"
+  exit 1
+}
+
+command -v cmake >/dev/null && command -v git >/dev/null && command -v pkg-config >/dev/null || \
+  die "need git, cmake, and pkg-config to rebuild hyprbars"
+[[ -d "$PKG_HEADERS" ]] || die "Hyprland package headers missing at $PKG_HEADERS"
+
+WORKDIR="$(mktemp -d /tmp/ocd-hyprbars-rebuild.XXXXXX)"
+trap 'rm -rf "$WORKDIR"' EXIT
+
+notify "Classic desktop titlebars" "Rebuilding hyprbars after the Hyprland update…"
+
+git clone --filter=blob:none --quiet https://github.com/hyprwm/hyprland-plugins "$WORKDIR/plugins"
+PIN_PLUGIN="$(python3 - "$PIN_HL" "$WORKDIR/plugins/hyprpm.toml" <<'PY'
+import re, sys
+hl = (sys.argv[1] or "").strip()
+text = open(sys.argv[2], encoding="utf-8").read()
+if not hl:
+    sys.exit(0)
+for a, b in re.findall(r'\["([0-9a-f]+)"\s*,\s*"([0-9a-f]+)"\]', text):
+    if hl.startswith(a) or a.startswith(hl):
+        print(b)
+        break
+PY
+)"
+if [[ -n "$PIN_PLUGIN" ]]; then
+  git -C "$WORKDIR/plugins" checkout --detach --quiet "$PIN_PLUGIN"
+fi
+
+cmake -S "$WORKDIR/plugins/hyprbars" -B "$WORKDIR/build" >/dev/null
+cmake --build "$WORKDIR/build" -j"$(nproc)" >/dev/null
+
+BUILT="$(find "$WORKDIR/build" -name '*hyprbars.so' -print -quit)"
+[[ -n "$BUILT" && -f "$BUILT" ]] || die "cmake did not produce hyprbars.so"
+
+mkdir -p "$CACHE/hyprland-plugins"
+install -m 0755 "$BUILT" "$PLUGIN_SO"
+
+if [[ -d "$CACHE/headersRoot/include" ]]; then
+  mkdir -p "$CACHE/headersRoot/include/hyprland"
+  rsync -a --delete "$PKG_HEADERS/" "$CACHE/headersRoot/include/hyprland/" 2>/dev/null || true
+fi
+
+hyprctl plugin load "$PLUGIN_SO" >/dev/null
+hyprctl reload >/dev/null 2>&1 || true
+hyprpm reload >/dev/null 2>&1 || true
+
+if hyprctl plugin list 2>/dev/null | grep -qi hyprbars; then
+  notify "Classic desktop titlebars" "Titlebars restored."
+  exit 0
+fi
+
+die "hyprbars built but did not stay loaded. Try: hyprctl plugin load $PLUGIN_SO"

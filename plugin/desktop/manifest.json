@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.jstuglik.desktop",
   "name": "Classic Desktop Menu",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "author": "Jakub Stuglik",
   "license": "GPL-3.0",
   "description": "Windows-style right-click menu on the empty desktop: new folder, wallpaper, theme, display, Files, Terminal.",

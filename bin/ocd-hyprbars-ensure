@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Load hyprbars after login.
+#
+# hyprpm does not always inject the plugin at compositor start. A Hyprland
+# package rebuild (even the same version with a new ABI hash) leaves headers
+# stale, so the cached .so throws "[hb] Version mismatch". A full
+# `hyprctl reload` also unloads hyprpm plugins, so config reload must be
+# followed by another hyprpm reload for ocd.lua buttons to stick.
+set -euo pipefail
+
+loaded() {
+  hyprctl plugin list 2>/dev/null | grep -qi hyprbars
+}
+
+notify() {
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -a ocd-classic -u critical "Classic desktop titlebars" "$1" || true
+  fi
+}
+
+rebuild="${HOME}/.local/bin/ocd-hyprbars-rebuild"
+hint="Hyprland was updated; titlebars need a rebuild. Open a terminal and run: ocd-hyprbars-rebuild"
+
+apply_config_and_reattach() {
+  # ocd.lua can only add titlebar buttons while the plugin is loaded.
+  # hyprctl reload then drops hyprpm plugins; re-attach afterwards.
+  hyprctl reload >/dev/null 2>&1 || true
+  hyprpm reload >/dev/null 2>&1 || true
+}
+
+try_rebuild() {
+  if [[ -x "$rebuild" ]]; then
+    "$rebuild" || return 1
+    loaded
+    return $?
+  fi
+  notify "$hint"
+  return 1
+}
+
+reload_out=""
+reload_out="$(hyprpm reload 2>&1)" || true
+
+if loaded; then
+  apply_config_and_reattach
+  if loaded; then
+    exit 0
+  fi
+fi
+
+# hyprpm can report success while the compositor rejects the .so
+# ("[hb] Version mismatch" after an Aquamarine-only Hyprland pkgrel bump).
+so="/var/cache/hyprpm/$(id -un)/hyprland-plugins/hyprbars.so"
+load_err=""
+if [[ -f "$so" ]] && ! loaded; then
+  load_err="$(hyprctl plugin load "$so" 2>&1 || true)"
+  if loaded; then
+    apply_config_and_reattach
+    if loaded; then
+      exit 0
+    fi
+  fi
+fi
+
+need_rebuild=0
+if grep -qi 'headers are not up-to-date\|Version mismatch' <<<"${reload_out}"$'\n'"${load_err}"; then
+  need_rebuild=1
+fi
+
+if [[ "$need_rebuild" -eq 0 ]]; then
+  apply_config_and_reattach
+  if loaded; then
+    exit 0
+  fi
+fi
+
+if try_rebuild; then
+  exit 0
+fi
+notify "$hint"
+exit 1
